@@ -4,21 +4,49 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>シフト管理ツール</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic",Meiryo,"Segoe UI",sans-serif;background:#f5f5f0;min-height:100vh;color:#1a1a1a}
+body{font-family:'Noto Sans JP',sans-serif;background:#f5f5f0;min-height:100vh;color:#1a1a1a}
+#shiftApp[hidden],#shiftLogin[hidden]{display:none!important}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#edf5f0,#f5f5f0)}
+.login-card{width:min(100%,380px);background:#fff;border:1px solid #e0e0d8;border-radius:16px;padding:28px;box-shadow:0 12px 36px rgba(15,74,46,.12)}
+.login-title{font-size:20px;font-weight:500;color:#1B6B45;margin-bottom:6px}
+.login-sub{font-size:13px;color:#666;margin-bottom:22px}
+.login-label{display:block;font-size:12px;color:#666;margin-bottom:6px}
+.login-password{width:100%;padding:11px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;font-size:16px;font-family:'Noto Sans JP',sans-serif}
+.login-password:focus{outline:none;border-color:#1B6B45;box-shadow:0 0 0 2px rgba(27,107,69,.15)}
+.login-submit{width:100%;margin-top:14px;min-height:44px}
+.login-error{min-height:20px;margin-top:10px;color:#A32D2D;font-size:13px;text-align:center}
+.login-error.success{color:#1B6B45}
+.password-change-message{min-height:20px;margin-top:10px;font-size:13px}
+.password-change-message.error{color:#A32D2D}
+.password-change-message.success{color:#1B6B45}
 .app-header{background:linear-gradient(135deg,#1B6B45,#0f4a2e);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
 .app-title{color:#fff;font-size:18px;font-weight:500}
 .app-sub{color:rgba(255,255,255,0.7);font-size:12px;margin-top:2px}
-.tab-bar{background:#fff;border-bottom:1px solid #e0e0d8;display:flex;padding:0 24px;overflow-x:auto}
-.tab{padding:14px 20px;font-size:14px;cursor:pointer;color:#666;border-bottom:2px solid transparent;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic",Meiryo,"Segoe UI",sans-serif;background:none;border-top:none;border-left:none;border-right:none}
-.tab:hover{color:#1B6B45}
-.tab.active{color:#1B6B45;border-bottom-color:#1B6B45;font-weight:500}
-.tab{white-space:nowrap}
+.shared-load-area{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.shared-load-status{color:#fff;font-size:12px;max-width:280px;text-align:right}
+.shared-load-status.error{color:#ffd4d4}
+@media(max-width:600px){
+  .app-header{align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .shared-load-area{width:100%;justify-content:flex-start}
+  .shared-load-status{text-align:left;max-width:none}
+}
+.menu-nav{background:#fff;border-bottom:1px solid #e0e0d8}
+.menu-groups{display:flex;justify-content:flex-start;gap:8px;padding:8px 24px 0}
+.menu-group{flex:0 0 132px;min-height:48px;padding:10px 12px;border:1px solid #d7d7cf;border-bottom:none;border-radius:12px 12px 0 0;background:#f5f5f0;color:#555;font-size:15px;font-weight:500;font-family:'Noto Sans JP',sans-serif;cursor:pointer;touch-action:manipulation}
+.menu-group:hover{color:#1B6B45;background:#eef5ea}
+.menu-group.active{background:#1B6B45;color:#fff;border-color:#1B6B45}
+.menu-children{display:none;gap:8px;padding:10px 24px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.menu-children.active{display:flex}
+.menu-child{min-height:44px;padding:9px 16px;border:1px solid #d7d7cf;border-radius:999px;background:#fff;color:#555;font-size:14px;font-family:'Noto Sans JP',sans-serif;white-space:nowrap;cursor:pointer;touch-action:manipulation}
+.menu-child:hover{color:#1B6B45;background:#f5f8f2}
+.menu-child.active{color:#1B6B45;background:#EAF3DE;border-color:#1B6B45;font-weight:500}
 .page{display:none;padding:24px;max-width:980px;margin:0 auto}
 #page-shift.active{max-width:none;padding:20px 16px}
 .page.active{display:block}
-.btn{padding:7px 14px;border-radius:8px;border:1px solid #ccc;background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic",Meiryo,"Segoe UI",sans-serif}
+.btn{padding:7px 14px;border-radius:8px;border:1px solid #ccc;background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;font-family:'Noto Sans JP',sans-serif}
 .btn:hover{background:#f0f0ec}
 .btn-primary{background:#1B6B45;color:#fff;border-color:#1B6B45}
 .btn-primary:hover{background:#155737}
@@ -38,7 +66,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku
 .field{display:flex;flex-direction:column;gap:4px}
 .label{font-size:12px;color:#666}
 .required{color:#A32D2D;margin-left:2px}
-input[type=text],select{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic",Meiryo,"Segoe UI",sans-serif}
+input[type=text],select{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;font-size:13px;font-family:'Noto Sans JP',sans-serif}
 input[type=text]:focus,select:focus{outline:none;border-color:#1B6B45;box-shadow:0 0 0 2px rgba(27,107,69,0.15)}
 .restriction-box{background:#f8f8f4;border-radius:8px;padding:12px;margin-top:4px}
 .restriction-label{font-size:12px;color:#666;margin-bottom:8px}
@@ -65,6 +93,21 @@ input[type=text]:focus,select:focus{outline:none;border-color:#1B6B45;box-shadow
   .btn-move{min-width:34px;min-height:34px;font-size:13px}
 }
 .table-row:hover{background:#fafafa}
+.staff-groups{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.staff-group{min-width:0;background:#fff;border:1px solid #e0e0d8;border-radius:12px;overflow:hidden}
+.staff-group-both{grid-column:1/-1}
+.staff-group-title{padding:11px 14px;background:#f5f5f0;border-bottom:1px solid #e0e0d8;font-size:14px;font-weight:500;color:#333}
+.staff-group .table-row{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto auto;padding:12px;align-items:start;gap:6px 8px}
+.staff-group .row-move{grid-column:2;grid-row:2;align-self:center}
+.staff-row-name{grid-column:1;grid-row:1;min-width:0}
+.staff-row-actions{grid-column:2;grid-row:1;display:flex;gap:6px}
+.staff-row-unit{grid-column:1;grid-row:2}
+.staff-row-type{grid-column:1/3;grid-row:3;font-size:12px;color:#666}
+.staff-row-ng{grid-column:1/3;grid-row:4;display:flex;align-items:center;flex-wrap:wrap;gap:3px}
+.staff-detail-label{font-size:11px;color:#888;margin-right:3px}
+.staff-group .empty{padding:24px 12px}
+.staff-groups>.empty{grid-column:1/-1}
+@media(max-width:600px){.staff-groups{grid-template-columns:1fr}.staff-group-both{grid-column:auto}}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
 .badge-sakura{background:#FBEAF0;color:#72243E}
 .badge-keyaki{background:#EAF3DE;color:#27500A}
@@ -78,8 +121,16 @@ input[type=text]:focus,select:focus{outline:none;border-color:#1B6B45;box-shadow
 .month-label{font-size:15px;font-weight:500;min-width:94px;text-align:center}
 .nav-btn{padding:4px 12px;font-size:16px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer}
 .nav-btn:hover{background:#f0f0ec}
-.staff-selector{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #e0e0d8;border-radius:10px}
-.staff-selector label{font-size:12px;color:#666;white-space:nowrap}
+.staff-selector{margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #e0e0d8;border-radius:10px}
+.staff-selector>label{display:block;margin-bottom:8px;font-size:12px;color:#666;white-space:nowrap}
+#staffTabs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
+#staffTabs>span{grid-column:1/-1}
+#staffTabs.filtered .kibou-staff-group{grid-column:1/-1}
+.kibou-staff-group{min-width:0;padding:9px;border:1px solid #e0e0d8;border-radius:9px;background:#fafaf8}
+.kibou-staff-group-both{grid-column:1/-1}
+.kibou-staff-group-title{margin-bottom:7px;font-size:12px;font-weight:500;color:#555}
+.kibou-staff-group-buttons{display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:600px){#staffTabs{grid-template-columns:1fr}.kibou-staff-group-both{grid-column:auto}}
 .staff-tab{padding:5px 12px;border-radius:20px;border:1px solid #ccc;background:#fff;font-size:12px;cursor:pointer;color:#1a1a1a}
 .staff-tab:hover{background:#f0f0ec}
 .staff-tab.active{background:#1B6B45;color:#fff;border-color:#1B6B45}
@@ -114,7 +165,7 @@ table.calendar td.other-month{background:#fafaf8}
 .radio-group{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .radio-item{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
 .radio-item input{cursor:pointer;width:16px;height:16px}
-.shift-sel-inline{margin-top:6px;padding:6px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic",Meiryo,"Segoe UI",sans-serif;width:100%}
+.shift-sel-inline{margin-top:6px;padding:6px 10px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:'Noto Sans JP',sans-serif;width:100%}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .save-bar{background:#fff;border:1px solid #e0e0d8;border-radius:12px;padding:14px 20px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .save-note{font-size:12px;color:#666}
@@ -146,10 +197,8 @@ table.stbl td.name-cell .emp{font-size:10px;color:#999;margin-left:3px}
 .stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .stat-item{background:#fff;border:1px solid #e0e0d8;border-radius:8px;padding:7px 12px;font-size:12px;color:#666}
 .stat-item span{font-weight:500;color:#1a1a1a;margin-right:2px}
-.cell-locked{background:#edf7f1!important;outline:2px solid #1B6B45;outline-offset:-2px}
 .cell-kibou{background:#fff9f0!important;outline:1px dashed #c09030;outline-offset:-1px}
-.lock-mark{font-size:7px;vertical-align:super;color:#1B6B45;margin-left:1px}
-.kibou-mark{font-size:7px;vertical-align:super;color:#c09030;margin-left:1px}
+.sc-kibou-display{color:#A32D2D!important}
 /* 日別勤務人数集計 */
 .daily-sum-section{margin-top:20px}
 .daily-sum-title{font-size:13px;font-weight:500;color:#555;margin-bottom:6px;padding-left:2px}
@@ -209,9 +258,11 @@ table.stbl td[colspan]{position:static}
 
 /* タッチデバイス専用（iPad・iPhone） */
 @media(hover:none)and(pointer:coarse){
-  /* タブバー */
-  .tab{padding:16px 20px}
-  .tab-bar{padding:0 12px}
+  /* 上部メニュー */
+  .menu-groups{padding:8px 12px 0}
+  .menu-group{min-height:52px;padding:12px 18px;font-size:16px}
+  .menu-children{padding:10px 12px}
+  .menu-child{min-height:48px;padding:11px 18px;font-size:15px}
   /* ボタン：最小44px高さ（Apple HIG 推奨） */
   .btn{min-height:44px;padding:10px 18px;font-size:14px}
   .btn.btn-sm{min-height:36px;padding:7px 14px;font-size:13px}
@@ -307,23 +358,48 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
 </head>
 <body>
 
+<div class="login-screen" id="shiftLogin">
+  <form class="login-card" onsubmit="submitShiftLogin(event);return false">
+    <div class="login-title">シフト管理ツール</div>
+    <div class="login-sub">共通パスワードを入力してください</div>
+    <label class="login-label" for="shiftLoginPassword">パスワード</label>
+    <input class="login-password" id="shiftLoginPassword" type="password" autocomplete="current-password" required>
+    <button class="btn btn-primary login-submit" id="shiftLoginButton" type="submit">ログイン</button>
+    <div class="login-error" id="shiftLoginError" role="alert" aria-live="polite"></div>
+  </form>
+</div>
+
+<div id="shiftApp" hidden>
 <div class="app-header">
   <div>
     <div class="app-title">シフト管理ツール</div>
     <div class="app-sub">ケアシフト自動生成システム</div>
   </div>
+  <div class="shared-load-area">
+    <span class="shared-load-status" id="sharedLoadStatus" role="status" aria-live="polite"></span>
+    <button class="btn" id="sharedSaveButton" type="button" onclick="saveSharedData()">共有へ保存</button>
+  </div>
 </div>
 
-<div class="tab-bar">
-  <button class="tab active" onclick="showTab('staff')">職員マスター</button>
-  <button class="tab" onclick="showTab('kibou')">希望休入力</button>
-  <button class="tab" onclick="showTab('shift')">シフト自動生成</button>
-  <button class="tab" onclick="showTab('codes')">勤務コード設定</button>
-  <button class="tab" onclick="showTab('juichiren')">11連管理</button>
-</div>
+<nav class="menu-nav" aria-label="メインメニュー">
+  <div class="menu-groups">
+    <button class="menu-group active" type="button" data-menu-group="shift" onclick="showMenuGroup('shift')">シフト管理</button>
+    <button class="menu-group" type="button" data-menu-group="settings" onclick="showMenuGroup('settings')">各種設定</button>
+  </div>
+  <div class="menu-children active" data-menu-children="shift">
+    <button class="menu-child active" type="button" data-tab="shift" onclick="showTab('shift')">シフト生成</button>
+    <button class="menu-child" type="button" data-tab="kibou" onclick="showTab('kibou')">希望休入力</button>
+  </div>
+  <div class="menu-children" data-menu-children="settings">
+    <button class="menu-child" type="button" data-tab="codes" onclick="showTab('codes')">勤務コード設定</button>
+    <button class="menu-child" type="button" data-tab="staff" onclick="showTab('staff')">職員マスター</button>
+    <button class="menu-child" type="button" data-tab="juichiren" onclick="showTab('juichiren')">11連管理</button>
+    <button class="menu-child" type="button" data-tab="password" onclick="showTab('password')">パスワード変更</button>
+  </div>
+</nav>
 
 <!-- ===== 職員マスター ===== -->
-<div class="page active" id="page-staff">
+<div class="page" id="page-staff">
   <div id="idMigrationArea"></div>
   <div id="staffOpPanel"></div>
   <div id="rosterImportArea"></div>
@@ -333,7 +409,7 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
       <div class="form-grid">
         <div class="field"><label class="label">氏名<span class="required">*</span></label><input type="text" id="fname" placeholder="例：田中 花子"></div>
         <div class="field"><label class="label">ユニット<span class="required">*</span></label>
-          <select id="funit"><option value="">選択</option><option value="さくら">さくら</option><option value="けやき">けやき</option><option value="中立兼務">中立兼務</option></select>
+          <select id="funit"><option value="">選択</option><option value="さくら">さくら</option><option value="けやき">けやき</option><option value="中立兼務">兼務</option></select>
         </div>
         <div class="field"><label class="label">勤務形態<span class="required">*</span></label>
           <select id="ftype" onchange="onTypeChange()"><option value="">選択</option><option value="全勤務">通常勤務（早出・日3・遅出・夜勤）</option><option value="日勤">日勤勤務（「日」のみ）</option><option value="夜勤なし">通常勤務（夜勤なし）</option><option value="夜勤専従">夜勤専従（手動指定の夜勤のみ）</option><option value="制限あり">勤務制限あり</option></select>
@@ -344,6 +420,20 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
         <div class="field form-full" id="restrictField" style="display:none">
           <label class="label">勤務可能なシフト（複数選択可）</label>
           <div class="restriction-box"><div class="restriction-label">この職員が勤務できるシフトを選んでください（選ばなかったシフトは自動生成で割り当てません）</div><div class="chip-row" id="shiftChips"></div></div>
+        </div>
+        <div class="field form-full">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button type="button" class="btn" onclick="openCustomShiftCodePicker()">追加勤務を設定</button>
+            <span id="customShiftCodeSummary" style="font-size:13px;color:#555"></span>
+          </div>
+          <div class="restriction-box" id="customShiftCodePicker" style="display:none;margin-top:10px">
+            <div class="restriction-label">この職員が使用できる追加勤務コードを選んでください（複数選択可）</div>
+            <div class="chip-row" id="customShiftCodeChips"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+              <button type="button" class="btn" onclick="cancelCustomShiftCodePicker()">キャンセル</button>
+              <button type="button" class="btn btn-primary" onclick="confirmCustomShiftCodePicker()">決定</button>
+            </div>
+          </div>
         </div>
         <div class="field form-full" id="baseShiftField">
           <label class="label">基本勤務</label>
@@ -357,6 +447,9 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
         </div>
         <div class="field"><label class="label">基本休日数<span class="required">*</span></label>
           <select id="fbaserest"><option value="8">8日</option><option value="9" selected>9日</option><option value="10">10日</option><option value="11">11日</option><option value="12">12日</option><option value="13">13日</option><option value="14">14日</option></select>
+        </div>
+        <div class="field"><label class="label">最大連勤</label>
+          <select id="fmaxconsec"><option value="3">3日</option><option value="4">4日</option><option value="5" selected>5日</option></select>
         </div>
         <div class="field form-full">
           <label class="label">休み希望曜日（複数選択可）</label>
@@ -375,15 +468,12 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
       <div class="count-item"><span id="cAll">0</span>名 合計</div>
       <div class="count-item"><span id="cSakura">0</span>名 さくら</div>
       <div class="count-item"><span id="cKeyaki">0</span>名 けやき</div>
-      <div class="count-item"><span id="cBoth">0</span>名 中立兼務</div>
+      <div class="count-item"><span id="cBoth">0</span>名 兼務</div>
     </div>
     <button class="btn btn-primary" onclick="openStaffForm()" style="margin-left:auto">＋ 職員を追加</button>
   </div>
 
-  <div class="table-card">
-    <div class="table-head"><div>並び</div><div>氏名</div><div>ユニット</div><div>勤務形態</div><div>NGシフト</div><div></div></div>
-    <div id="staffList"><div class="empty">まだ職員が登録されていません</div></div>
-  </div>
+  <div id="staffList" class="staff-groups"><div class="empty">まだ職員が登録されていません</div></div>
 
   <div class="save-bar">
     <span class="save-note">※ データはブラウザに自動保存されます</span>
@@ -408,13 +498,13 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
       <option value="all">全ユニット</option>
       <option value="さくら">さくら</option>
       <option value="けやき">けやき</option>
-      <option value="中立兼務">中立兼務</option>
+      <option value="中立兼務">兼務</option>
     </select>
     <button class="btn" onclick="clearMonth()">この月をリセット</button>
   </div>
   <div class="staff-selector">
     <label>職員：</label>
-    <div id="staffTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    <div id="staffTabs"></div>
   </div>
   <div class="calendar-wrap"><table class="calendar" id="cal"></table></div>
   <div class="summary-bar" id="summaryBar"></div>
@@ -430,7 +520,7 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
 </div>
 
 <!-- ===== シフト自動生成 ===== -->
-<div class="page" id="page-shift">
+<div class="page active" id="page-shift">
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
     <div class="month-nav">
       <button class="nav-btn" onclick="changeShiftMonth(-1)">&#8249;</button>
@@ -441,7 +531,6 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
     <button class="btn" onclick="exportShiftCSV()" id="btnExportCSV" style="display:none">CSVで書き出し</button>
     <button class="btn" onclick="exportShiftXlsx()" id="btnExportXLSX" style="display:none">Excel出力</button>
     <button class="btn btn-danger btn-sm" onclick="openMonthResetPanel()" id="btnClearShift" style="display:none">リセット</button>
-    <button class="btn btn-sm" onclick="openMonthResetPanel()" style="margin-left:auto">試作データのリセット</button>
   </div>
   <div id="monthResetPanel"></div>
   <div id="shiftMsg" style="margin-bottom:12px;font-size:13px;color:#666"></div>
@@ -477,7 +566,7 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
     （勤務日にそのコード、休日は「休」。複数選んだ場合は回数が偏らないように振り分けます）。
     通常勤務・日勤勤務・夜勤なしの職員には、従来どおり早1・早2・日・日3・遅・夜勤だけを配置します。
     職員マスターで「基本勤務」を選ぶと、その職員はふだんその勤務になり、ほかの勤務可能なコードは必要人数が足りない日の応援としてだけ使います。
-    使用停止のコードは新しく選べなくなりますが、過去の勤務表・希望・ロックの表示はそのまま残ります。
+    使用停止のコードは新しく選べなくなりますが、過去の勤務表・希望の表示はそのまま残ります。
     勤務時間の設定は、まだ集計には使っていません。
   </div>
   <div id="codeFormArea" style="display:none">
@@ -517,7 +606,179 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
   </div>
 </div>
 
+<!-- ===== パスワード変更 ===== -->
+<div class="page" id="page-password">
+  <div class="form-card" style="margin-top:20px">
+    <div class="sec-title" style="margin-bottom:14px">共通パスワード変更</div>
+    <div class="form-grid">
+      <div class="field">
+        <label class="label" for="newSharedPassword">新しいパスワード</label>
+        <input class="login-password" id="newSharedPassword" type="password" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label class="label" for="newSharedPasswordConfirm">新しいパスワード（確認）</label>
+        <input class="login-password" id="newSharedPasswordConfirm" type="password" autocomplete="new-password">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-primary" id="changeSharedPasswordButton" type="button" onclick="changeSharedPassword()">パスワードを変更</button>
+    </div>
+    <div class="password-change-message" id="passwordChangeMessage" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+ </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+var SHIFT_SUPABASE_URL='https://xytxjujsydpvmrvnmcnj.supabase.co';
+var SHIFT_SUPABASE_PUBLISHABLE_KEY='sb_publishable_EzqE7TE3zY_AuZJlZWEuKA_3fsXczmK';
+var SHIFT_AUTH_EMAIL='shift-hagoromo@internal.invalid';
+var shiftSupabaseClient=null;
+
+function showShiftLogin(){
+  document.getElementById('shiftLogin').hidden=false;
+  document.getElementById('shiftApp').hidden=true;
+}
+function showShiftApp(){
+  document.getElementById('shiftLogin').hidden=true;
+  document.getElementById('shiftApp').hidden=false;
+}
+function setShiftLoginBusy(busy){
+  var button=document.getElementById('shiftLoginButton');
+  var password=document.getElementById('shiftLoginPassword');
+  button.disabled=busy;
+  password.disabled=busy;
+  button.textContent=busy?'ログイン中…':'ログイン';
+}
+async function initializeShiftLogin(){
+  showShiftLogin();
+  try{
+    if(!window.supabase||typeof window.supabase.createClient!=='function')throw new Error('Supabase client unavailable');
+    localStorage.removeItem('shiftTool_supabase_auth');
+    shiftSupabaseClient=window.supabase.createClient(SHIFT_SUPABASE_URL,SHIFT_SUPABASE_PUBLISHABLE_KEY,{
+      auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'shiftTool_supabase_auth'}
+    });
+    document.getElementById('shiftLoginPassword').focus();
+  }catch(e){
+    document.getElementById('shiftLoginPassword').focus();
+  }
+}
+async function submitShiftLogin(event){
+  event.preventDefault();
+  var password=document.getElementById('shiftLoginPassword').value;
+  var errorBox=document.getElementById('shiftLoginError');
+  var authenticated=false;
+  errorBox.classList.remove('success');
+  errorBox.textContent='';
+  setShiftLoginBusy(true);
+  try{
+    if(!shiftSupabaseClient)throw new Error('Supabase client unavailable');
+    var result=await shiftSupabaseClient.auth.signInWithPassword({email:SHIFT_AUTH_EMAIL,password:password});
+    var user=result.data&&result.data.user;
+    if(result.error||!user||user.email!==SHIFT_AUTH_EMAIL)throw new Error('Login failed');
+    authenticated=true;
+    var restored=await restoreLatestSharedData();
+    if(!restored){
+      errorBox.textContent='最新データを取得できませんでした';
+      return;
+    }
+    document.getElementById('shiftLoginPassword').value='';
+    document.getElementById('sharedLoadStatus').textContent='最新の共有データを取得しました';
+    showShiftApp();
+  }catch(e){
+    errorBox.textContent=authenticated
+      ?'最新データを取得できませんでした'
+      :'パスワードが違います';
+    document.getElementById('shiftLoginPassword').select();
+  }finally{
+    setShiftLoginBusy(false);
+  }
+}
+async function changeSharedPassword(){
+  var first=document.getElementById('newSharedPassword');
+  var second=document.getElementById('newSharedPasswordConfirm');
+  var button=document.getElementById('changeSharedPasswordButton');
+  var message=document.getElementById('passwordChangeMessage');
+  var password=first.value;
+  message.className='password-change-message';
+  message.textContent='';
+  if(password.length<6){
+    message.classList.add('error');
+    message.textContent='パスワードは6文字以上で入力してください';
+    return;
+  }
+  if(password!==second.value){
+    message.classList.add('error');
+    message.textContent='新しいパスワードが一致しません';
+    return;
+  }
+  button.disabled=true;first.disabled=true;second.disabled=true;
+  button.textContent='変更中…';
+  try{
+    if(!shiftSupabaseClient)throw new Error('Not signed in');
+    var sessionResult=await shiftSupabaseClient.auth.getSession();
+    if(sessionResult.error||!sessionResult.data||!sessionResult.data.session)throw new Error('Not signed in');
+    var result=await shiftSupabaseClient.auth.updateUser({password:password});
+    if(result.error||!result.data||!result.data.user)throw new Error('Update failed');
+    first.value='';second.value='';
+    var signOutResult=await shiftSupabaseClient.auth.signOut({scope:'local'});
+    if(signOutResult.error)throw new Error('Sign out failed');
+    var loginMessage=document.getElementById('shiftLoginError');
+    loginMessage.classList.add('success');
+    loginMessage.textContent='パスワードを変更しました';
+    showShiftLogin();
+    document.getElementById('shiftLoginPassword').value='';
+    document.getElementById('shiftLoginPassword').focus();
+  }catch(e){
+    message.classList.add('error');
+    message.textContent=e&&e.message==='Sign out failed'
+      ?'パスワードは変更されましたが、ログアウトできませんでした。画面を再読み込みしてください'
+      :'パスワードを変更できませんでした。もう一度お試しください';
+  }finally{
+    button.disabled=false;first.disabled=false;second.disabled=false;
+    button.textContent='パスワードを変更';
+  }
+}
+async function restoreLatestSharedData(){
+  if(!shiftSupabaseClient)throw new Error('Shared data unavailable');
+  var sessionResult=await shiftSupabaseClient.auth.getSession();
+  if(sessionResult.error||!sessionResult.data||!sessionResult.data.session)throw new Error('Shared data unavailable');
+  var result=await shiftSupabaseClient.from('shift_shared_state').select('payload_text').single();
+  if(result.error||!result.data||typeof result.data.payload_text!=='string'||!result.data.payload_text.trim())
+    throw new Error('Shared data unavailable');
+  return handleRestoreFileText(result.data.payload_text,'Supabase共有データ.json',{skipConfirm:true});
+}
+async function saveSharedData(){
+  var button=document.getElementById('sharedSaveButton');
+  var status=document.getElementById('sharedLoadStatus');
+  button.disabled=true;
+  button.textContent='保存中…';
+  status.classList.remove('error');
+  status.textContent='';
+  try{
+    if(!shiftSupabaseClient)throw new Error('Supabase client unavailable');
+    var sessionResult=await shiftSupabaseClient.auth.getSession();
+    if(sessionResult.error||!sessionResult.data||!sessionResult.data.session)throw new Error('Login required');
+    var backup=exportFullBackup({returnText:true,requireComplete:true});
+    if(!backup.ok||typeof backup.text!=='string'||!backup.text)throw new Error('Backup creation failed');
+    var stateResult=await shiftSupabaseClient.from('shift_shared_state').select('facility_id').single();
+    if(stateResult.error||!stateResult.data||!stateResult.data.facility_id)throw new Error('Shared state unavailable');
+    var saveResult=await shiftSupabaseClient.from('shift_shared_state')
+      .update({payload_text:backup.text})
+      .eq('facility_id',stateResult.data.facility_id)
+      .select('facility_id');
+    if(saveResult.error||!Array.isArray(saveResult.data)||saveResult.data.length!==1)throw new Error('Shared save failed');
+    status.textContent='共有データを保存しました';
+  }catch(e){
+    status.classList.add('error');
+    status.textContent='共有データを保存できませんでした';
+  }finally{
+    button.disabled=false;
+    button.textContent='共有へ保存';
+  }
+}
+
 var SHIFTS=['早1','早2','日','日3','遅','夜勤'];
 var STORAGE_STAFF='shiftTool_staffMaster';
 var STORAGE_KIBOU='shiftTool_kibou';
@@ -538,6 +799,10 @@ var TYPE_LABEL={'全勤務':'通常勤務（早出・日3・遅出・夜勤）',
 // 夜勤専従：ユーザーが夜勤日を手動で指定する職員。自動生成では何も割り当てず、指定のない日は空白のままにする
 function isNightOnlyStaff(s){return !!s&&s.type==='夜勤専従';}
 function isNightOnlyIndex(si){return isNightOnlyStaff(staff[si]);}
+function maxConsecOf(s){
+  var n=Number(s&&s.maxConsec);
+  return n===3||n===4||n===5?n:5;
+}
 // 未割当セルの読み方：夜勤専従は空白、それ以外は従来どおり「休」として扱う
 function cellAt(result,si,d0){
   var v=result[si]?result[si][d0]:null;
@@ -552,6 +817,8 @@ var chuuritsuUnit={};
 var editIndex=-1;
 var ngSelected=[];        // 保存形式（NGシフト）は変更しない
 var allowSelected=[];     // 画面で選ばれている「勤務可能なシフト」
+var customShiftCodesSelected=[]; // 画面で選ばれている「追加勤務コード」
+var customShiftCodesDraft=[];    // 選択パネル内の一時選択（決定時だけ反映）
 var ngOriginal=[];        // 編集前のNGシフト（並び順をそのまま保つために使う）
 var today=new Date();
 var curYear=today.getFullYear();
@@ -684,6 +951,7 @@ function indexShiftToId(mem,list,stored){
     var rows=mem[mk]||[],prev=(stored&&stored[mk])||null;
     var first=rows.filter(function(r){return Array.isArray(r);})[0];
     var m={days:first?first.length:(prev?prev.days:0),rows:{}};
+    if(prev&&prev.archivedStaff) m.archivedStaff=copyJson(prev.archivedStaff);
     if(prev) Object.keys(prev.rows||{}).forEach(function(id){if(!cur[id]) m.rows[id]=prev.rows[id];});
     rows.forEach(function(r,i){var s=list[i];if(s&&s.id&&Array.isArray(r)) m.rows[s.id]=r;});
     out[mk]=m;
@@ -742,10 +1010,30 @@ function loadGeneratedShiftFromStorage(){
 }
 
 
-/* タブ切り替え */
+/* メニュー・画面切り替え */
+var MENU_GROUP_TABS={shift:['shift','kibou'],settings:['codes','staff','juichiren','password']};
+var menuLastTab={shift:'shift',settings:'codes'};
+function menuGroupForTab(name){
+  if(MENU_GROUP_TABS.shift.indexOf(name)>=0)return 'shift';
+  if(MENU_GROUP_TABS.settings.indexOf(name)>=0)return 'settings';
+  return '';
+}
+function showMenuGroup(group){
+  if(!MENU_GROUP_TABS[group])return;
+  showTab(group==='shift'?'shift':(menuLastTab[group]||MENU_GROUP_TABS[group][0]));
+}
 function showTab(name){
-  document.querySelectorAll('.tab').forEach(function(t,i){
-    t.classList.toggle('active',['staff','kibou','shift','codes','juichiren'][i]===name);
+  var group=menuGroupForTab(name);
+  if(!group)return;
+  menuLastTab[group]=name;
+  document.querySelectorAll('.menu-group').forEach(function(button){
+    button.classList.toggle('active',button.getAttribute('data-menu-group')===group);
+  });
+  document.querySelectorAll('.menu-children').forEach(function(menu){
+    menu.classList.toggle('active',menu.getAttribute('data-menu-children')===group);
+  });
+  document.querySelectorAll('.menu-child').forEach(function(button){
+    button.classList.toggle('active',button.getAttribute('data-tab')===name);
   });
   document.querySelectorAll('.page').forEach(function(p){
     p.classList.toggle('active',p.id==='page-'+name);
@@ -785,12 +1073,58 @@ function buildChips(selectedNg,startEmpty){
   });
 }
 
+function buildCustomShiftCodeChips(selected){
+  loadShiftCodes();
+  customShiftCodesSelected=(selected||[]).filter(function(code){return isAdditionalShiftCode(code);});
+  customShiftCodesDraft=customShiftCodesSelected.slice();
+  updateCustomShiftCodeSummary();
+  cancelCustomShiftCodePicker();
+}
+function updateCustomShiftCodeSummary(){
+  var el=document.getElementById('customShiftCodeSummary');
+  if(el) el.textContent=customShiftCodesSelected.length?'追加勤務：'+customShiftCodesSelected.join('、'):'';
+}
+function openCustomShiftCodePicker(){
+  var el=document.getElementById('customShiftCodeChips'),panel=document.getElementById('customShiftCodePicker');
+  if(!el||!panel) return;
+  loadShiftCodes();
+  customShiftCodesDraft=customShiftCodesSelected.slice();
+  var choices=shiftCodes.filter(function(c){return isAdditionalShiftCode(c.code);});
+  el.innerHTML='';
+  if(!choices.length) el.innerHTML='<span style="font-size:12px;color:#999">追加勤務コードはありません</span>';
+  choices.forEach(function(info){
+    var code=info.code,c=document.createElement('span');
+    c.className='chip'+(customShiftCodesDraft.indexOf(code)>=0?' selected':'');
+    c.textContent=code+(info.active?'':'（停止中）');
+    c.onclick=function(){
+      var idx=customShiftCodesDraft.indexOf(code);
+      if(idx>=0){customShiftCodesDraft.splice(idx,1);c.classList.remove('selected');}
+      else{customShiftCodesDraft.push(code);c.classList.add('selected');}
+    };
+    el.appendChild(c);
+  });
+  panel.style.display='block';
+}
+function cancelCustomShiftCodePicker(){
+  var panel=document.getElementById('customShiftCodePicker');
+  if(panel) panel.style.display='none';
+  customShiftCodesDraft=customShiftCodesSelected.slice();
+}
+function confirmCustomShiftCodePicker(){
+  customShiftCodesSelected=customShiftCodesDraft.slice();
+  updateCustomShiftCodeSummary();
+  cancelCustomShiftCodePicker();
+  refreshBaseShiftOptions();
+}
+
 /* ===== 基本勤務（自動生成でふだん入れる勤務） ===== */
 // 入力中の画面の状態から、この職員が勤務できるコードを求める
 function formAllowedCodesForBase(){
   var type=document.getElementById('ftype').value;
   if(type==='夜勤専従'||!type) return [];
-  if(type==='制限あり') return allowSelected.slice();
+  if(type==='制限あり') return allowSelected.filter(function(code){
+    return !isAdditionalShiftCode(code)||customShiftCodesSelected.indexOf(code)>=0;
+  });
   // 通常勤務・日勤勤務・夜勤なしは、勤務形態で決まる既存コードだけ
   var ng=type==='日勤'?['早1','早2','日3','遅','夜勤']:type==='夜勤なし'?['夜勤']:[];
   return wishShiftOptions([]).filter(function(c){return isBuiltinCode(c)&&ng.indexOf(c)<0;});
@@ -851,8 +1185,10 @@ function openStaffForm(){
   document.getElementById('femp').value='常勤';
   document.getElementById('fmaxrest').value='4';
   document.getElementById('fbaserest').value='9';
+  document.getElementById('fmaxconsec').value='5';
   document.getElementById('restrictField').style.display='none';
   buildChips([],true); // 新規登録はすべて未選択（白）から
+  buildCustomShiftCodeChips([]);
   refreshBaseShiftOptions('');
   buildDowChips([]);
   document.getElementById('staffFormArea').style.display='block';
@@ -880,6 +1216,7 @@ function saveStaff(){
   var emp=document.getElementById('femp').value;
   var maxrest=parseInt(document.getElementById('fmaxrest').value);
   var baserest=parseInt(document.getElementById('fbaserest').value);
+  var maxConsec=parseInt(document.getElementById('fmaxconsec').value);
   if(!name){alert('氏名を入力してください');return;}
   if(!unit){alert('ユニットを選択してください');return;}
   if(!type){alert('勤務形態を選択してください');return;}
@@ -888,7 +1225,7 @@ function saveStaff(){
   else if(type==='日勤') ng=['早1','早2','日3','遅','夜勤'];
   else if(type==='夜勤なし') ng=['夜勤'];
   else ng=[];
-  var obj={name:name,unit:unit,type:type,emp:emp,maxrest:maxrest,baserest:baserest,ngShifts:ng,ngDow:ngDowSelected.slice()};
+  var obj={name:name,unit:unit,type:type,emp:emp,maxrest:maxrest,baserest:baserest,maxConsec:maxConsec,ngShifts:ng,ngDow:ngDowSelected.slice(),customShiftCodes:customShiftCodesSelected.slice()};
   // 基本勤務は、勤務可能なシフトに残っているときだけ保存する（未設定なら項目自体を持たせない）
   var baseSel=document.getElementById('fbaseshift').value;
   if(baseSel&&formAllowedCodesForBase().indexOf(baseSel)>=0) obj.baseShift=baseSel;
@@ -912,8 +1249,10 @@ function editStaff(i){
   document.getElementById('femp').value=s.emp;
   document.getElementById('fmaxrest').value=s.maxrest;
   document.getElementById('fbaserest').value=s.baserest||8;
+  document.getElementById('fmaxconsec').value=String(maxConsecOf(s));
   document.getElementById('restrictField').style.display=s.type==='制限あり'?'block':'none';
   buildChips(s.type==='制限あり'?s.ngShifts:[]);
+  buildCustomShiftCodeChips(customShiftCodesForForm(s));
   refreshBaseShiftOptions(s.baseShift||'');
   buildDowChips(s.ngDow||[]);
   document.getElementById('staffFormArea').style.display='block';
@@ -970,7 +1309,7 @@ function renderStaffList(){
   document.getElementById('cSakura').textContent=staff.filter(function(s){return s.unit==='さくら';}).length;
   document.getElementById('cKeyaki').textContent=staff.filter(function(s){return s.unit==='けやき';}).length;
   document.getElementById('cBoth').textContent=staff.filter(function(s){return s.unit==='中立兼務';}).length;
-  list.innerHTML=staff.map(function(s,i){
+  function rowHtml(s,i){
     var chips=s.ngShifts.length
       ?s.ngShifts.map(function(n){return '<span class="rchip">'+n+'</span>';}).join('')
       :'<span style="font-size:12px;color:#999">—</span>';
@@ -982,16 +1321,24 @@ function renderStaffList(){
         +'<button class="btn btn-sm btn-move" onclick="moveStaffStep('+i+',-1)"'+(up?'':' disabled')+' title="上へ">&#9650;</button>'
         +'<button class="btn btn-sm btn-move" onclick="moveStaffStep('+i+',1)"'+(down?'':' disabled')+' title="下へ">&#9660;</button>'
       +'</div>'
-      +'<div style="font-weight:500">'+s.name+' <span style="font-size:11px;color:#999">'+s.emp+'</span></div>'
-      +'<div><span class="badge '+UNIT_BADGE[s.unit]+'">'+s.unit+'</span></div>'
-      +'<div style="font-size:12px;color:#666">'+TYPE_LABEL[s.type]
+      +'<div class="staff-row-name" style="font-weight:500">'+s.name+' <span style="font-size:11px;color:#999">'+s.emp+'</span></div>'
+      +'<div class="staff-row-unit"><span class="badge '+UNIT_BADGE[s.unit]+'">'+(s.unit==='中立兼務'?'兼務':s.unit)+'</span></div>'
+      +'<div class="staff-row-type"><span class="staff-detail-label">勤務形態</span>'+TYPE_LABEL[s.type]
         +(s.baseShift?'<br><span style="font-size:11px;color:#1B6B45">基本：'+escHtml(codeDisplayName(s.baseShift))+'</span>':'')+'</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:3px">'+chips+'</div>'
-      +'<div style="display:flex;gap:6px">'
+      +'<div class="staff-row-ng"><span class="staff-detail-label">NGシフト</span>'+chips+'</div>'
+      +'<div class="staff-row-actions">'
       +'<button class="btn btn-sm" onclick="editStaff('+i+')">編集</button>'
       +'<button class="btn btn-sm btn-danger" onclick="deleteStaff('+i+')">削除</button>'
       +'</div></div>';
-  }).join('');
+  }
+  function groupHtml(unit,title,extraClass){
+    var rows=staff.map(function(s,i){return {s:s,i:i};}).filter(function(x){return x.s.unit===unit;});
+    return '<section class="staff-group '+(extraClass||'')+'"><div class="staff-group-title">'+title+'（'+rows.length+'名）</div>'
+      +(rows.length?rows.map(function(x){return rowHtml(x.s,x.i);}).join(''):'<div class="empty">登録されている職員はいません</div>')+'</section>';
+  }
+  list.innerHTML=groupHtml('さくら','さくら職員','staff-group-sakura')
+    +groupHtml('けやき','けやき職員','staff-group-keyaki')
+    +groupHtml('中立兼務','兼務職員','staff-group-both');
   bindStaffReorder();
 }
 
@@ -1149,12 +1496,32 @@ function renderStaffTabs(){
     return;
   }
   if(!fs.find(function(x){return x.i===selectedStaffIdx;})){selectedStaffIdx=fs[0].i;}
-  fs.forEach(function(x){
-    var btn=document.createElement('button');
-    btn.className='staff-tab'+(x.i===selectedStaffIdx?' active':'');
-    btn.textContent=x.s.name;
-    btn.onclick=function(){selectedStaffIdx=x.i;renderStaffTabs();};
-    tabs.appendChild(btn);
+  var selectedUnit=document.getElementById('unitFilter').value;
+  var groups=[
+    {unit:'さくら',title:'さくら職員',className:'kibou-staff-group-sakura'},
+    {unit:'けやき',title:'けやき職員',className:'kibou-staff-group-keyaki'},
+    {unit:'中立兼務',title:'兼務職員',className:'kibou-staff-group-both'}
+  ].filter(function(g){return selectedUnit==='all'||g.unit===selectedUnit;});
+  tabs.classList.toggle('filtered',selectedUnit!=='all');
+  groups.forEach(function(group){
+    var section=document.createElement('section');
+    section.className='kibou-staff-group '+group.className;
+    var title=document.createElement('div');
+    title.className='kibou-staff-group-title';
+    var members=fs.filter(function(x){return x.s.unit===group.unit;});
+    title.textContent=group.title+'（'+members.length+'名）';
+    section.appendChild(title);
+    var buttons=document.createElement('div');
+    buttons.className='kibou-staff-group-buttons';
+    members.forEach(function(x){
+      var btn=document.createElement('button');
+      btn.className='staff-tab'+(x.i===selectedStaffIdx?' active':'');
+      btn.textContent=x.s.name;
+      btn.onclick=function(){selectedStaffIdx=x.i;renderStaffTabs();};
+      buttons.appendChild(btn);
+    });
+    section.appendChild(buttons);
+    tabs.appendChild(section);
   });
   renderCal();
 }
@@ -1394,9 +1761,11 @@ function scTag(s){
   var label=SHIFT_LABEL[s]||s;
   return '<span class="sc '+cls+'">'+label+'</span>';
 }
-function scTagUnit(s,pfx){
+function scTagUnit(s,pfx,isKibouWork){
   var cls=codeColorClass(s);
-  return '<span class="sc '+cls+'">'+shiftLabelForDisplay(s,pfx)+'</span>';
+  var isKibouOff=s==='希望休';
+  var label=isKibouOff?'休★':shiftLabelForDisplay(s,pfx)+(isKibouWork?'★':'');
+  return '<span class="sc '+cls+((isKibouOff||isKibouWork)?' sc-kibou-display':'')+'">'+label+'</span>';
 }
 
 function getDaysInMonth(y,m){return new Date(y,m+1,0).getDate();}
@@ -1439,7 +1808,7 @@ function setWorkUnitCode(mkey,si,d0,code){
   if(code==='S'||code==='K')chuuritsuUnit[mkey][si][d0]=code;
   else delete chuuritsuUnit[mkey][si][d0];
 }
-// 希望シフト・ロックで固定されている、その日のその勤務の人数（code=null は施設全体）
+// 希望シフトで固定されている、その日のその勤務の人数（code=null は施設全体）
 function fixedCellCount(result,mkey,y,m,d0,shift,code){
   var c=0;
   for(var si=0;si<result.length;si++){
@@ -1509,14 +1878,11 @@ function getKibouForShift(si,y,m,day){
 }
 
 function isLocked(key,si,dIdx){
-  return !!(lockedCells[key]&&lockedCells[key][si]&&lockedCells[key][si][dIdx]);
+  // 旧バックアップとの互換性のため保存領域は残すが、勤務表ではロックを使用しない。
+  return false;
 }
 function setLock(key,si,dIdx,val){
-  if(!lockedCells[key])lockedCells[key]={};
-  if(!lockedCells[key][si])lockedCells[key][si]={};
-  if(val)lockedCells[key][si][dIdx]=true;
-  else delete lockedCells[key][si][dIdx];
-  saveLockedCells();
+  return;
 }
 function isKibouFixed(si,y,m,d){
   return !!(getKibouForShift(si,y,m,d));
@@ -1543,9 +1909,22 @@ function allowedShiftCodesOf(s){
   if(!s.ngShifts||!s.ngShifts.length) return cands;
   return cands.filter(function(c){return s.ngShifts.indexOf(c)<0;});
 }
+// 明示設定がない既存職員は、従来の「勤務制限あり＋NGシフト」から追加コードを復元する。
+function customShiftCodesForForm(s){
+  if(!s) return [];
+  var list=Array.isArray(s.customShiftCodes)?s.customShiftCodes.slice():
+    (s.type==='制限あり'?allowedShiftCodesOf(s).filter(isAdditionalShiftCode):[]);
+  return list.filter(function(code,i){return isAdditionalShiftCode(code)&&list.indexOf(code)===i;});
+}
+function customShiftCodesOf(s){
+  return customShiftCodesForForm(s).filter(function(code){
+    var info=getCodeInfo(code);return !!(info&&info.active);
+  });
+}
 // 職員マスターで選んだ「基本勤務」。勤務可能なシフトから外れた・使用停止・削除済みなら未設定として扱う
 function baseShiftOf(s){
   if(!s||!s.baseShift||isNightOnlyStaff(s)) return '';
+  if(isAdditionalShiftCode(s.baseShift)) return customShiftCodesOf(s).indexOf(s.baseShift)>=0?s.baseShift:'';
   return allowedShiftCodesOf(s).indexOf(s.baseShift)>=0?s.baseShift:'';
 }
 // 必要人数が決まっている勤務（ユニット別1名・早2は全体1名）。自動生成はこの枠どおりに配置する
@@ -1556,18 +1935,14 @@ function baseFillShiftOf(s){
   var bs=baseShiftOf(s);
   return bs&&!isRequiredCountShift(bs)?bs:'';
 }
-// 「勤務制限あり」の職員が勤務可能にした追加コード（勤務コード設定で追加したコード）。
+// 職員マスターで使用可能にした追加コード。
 // 必要人数の枠で埋まらない勤務日に、その人の基本勤務として自動配置する。
 // 既存10コードは従来の必要人数ルールで配置するため、ここには含めない。
 function autoFillCodesOf(s){
-  if(!s||isNightOnlyStaff(s)||s.type!=='制限あり') return [];
-  var list=allowedShiftCodesOf(s).filter(function(code){
-    if(isBuiltinCode(code)) return false;
-    var info=getCodeInfo(code);
-    return !!(info&&info.active);
-  });
-  // 基本勤務が選ばれていれば、空き日はまずそのコードで埋める（既存コードでも対象にする）
-  var bs=baseFillShiftOf(s);
+  if(!s||isNightOnlyStaff(s)) return [];
+  var list=customShiftCodesOf(s);
+  // 従来の「勤務制限あり」は、基本勤務を優先する挙動も維持する。
+  var bs=s.type==='制限あり'?baseFillShiftOf(s):'';
   if(bs){list=list.filter(function(c){return c!==bs;});list.unshift(bs);}
   return list;
 }
@@ -1595,11 +1970,11 @@ function evaluateShiftCandidate(result,y,m,mkey){
       var oneRestDiff=Math.abs(rs.total-target);
       restDiff+=oneRestDiff;restSevere+=oneRestDiff*oneRestDiff;
     }
-    var consec=0,restRun=0,firstHalf=0,secondHalf=0;
+    var consec=0,restRun=0,firstHalf=0,secondHalf=0,consecLimit=maxConsecOf(staff[si]);
     for(var d=0;d<days;d++){
       var sh=result[si][d]||'休',rv=getRestValue(sh);
       if(rv>0){if(d<days/2)firstHalf+=rv;else secondHalf+=rv;}
-      if(needsWorkUnit(sh)){consec++;restRun=0;if(consec>5)consecPenalty+=consec-5;}
+      if(needsWorkUnit(sh)){consec++;restRun=0;if(consec>consecLimit)consecPenalty+=consec-consecLimit;}
       else{consec=0;if(rv>=1){restRun++;if(restRun>2)longRest+=restRun-2;}else restRun=0;}
     }
     distribution+=Math.abs(firstHalf-secondHalf);
@@ -1620,7 +1995,7 @@ function evaluateShiftCandidate(result,y,m,mkey){
 }
 
 /* 生成後の休日偏りを、既存の必須勤務を別職員へ移すことで縮小する。
-   勤務枠そのものは増減させず、希望・ロック・勤務制限・実勤務先・5連勤上限を守る。
+   勤務枠そのものは増減させず、希望・勤務制限・実勤務先・職員別の最大連勤を守る。
    夜勤は翌日の明/休と一体であり、単純移動すると前後関係を壊すためここでは対象外とする。 */
 function rebalanceRestByTransfer(result,y,m,mkey){
   var days=getDaysInMonth(y,m),report={attempted:0,accepted:0,initialOpportunities:{},blocked:{},moves:[]};
@@ -1643,7 +2018,7 @@ function rebalanceRestByTransfer(result,y,m,mkey){
     function no(reason){if(countReason)addBlocked(reason);return null;}
     if(isNightOnlyIndex(to)||isNightOnlyIndex(from))return no('夜勤専従は対象外');
     if(result[to][d0]!=='休')return no('交換先が通常休でない');
-    if(fixed(to,d0)||fixed(from,d0))return no('希望・ロック');
+    if(fixed(to,d0)||fixed(from,d0))return no('希望入力');
     if(['早1','早2','日','日3','遅'].indexOf(base)<0)return no(base==='夜勤'?'夜勤・明け保護':'対象外勤務');
     if(autoAssignableShiftCodes(staff[to]).indexOf(base)<0)return no('勤務形態・NG勤務');
     if(staff[to].ngDow&&staff[to].ngDow.indexOf(getDow(y,m,d0+1))>=0)return no('NG曜日');
@@ -1660,7 +2035,7 @@ function rebalanceRestByTransfer(result,y,m,mkey){
       for(var d0=0;d0<days;d0++){
         var possible=transferCheck(to,from,d0,false);if(!possible)continue;
         var oldTo=result[to][d0],oldFrom=result[from][d0];result[to][d0]=possible.shift;result[from][d0]='休';
-        var safe=maxConsec(to)<=5&&maxConsec(from)<=5;
+        var safe=maxConsec(to)<=maxConsecOf(staff[to])&&maxConsec(from)<=maxConsecOf(staff[from]);
         result[to][d0]=oldTo;result[from][d0]=oldFrom;
         if(safe){var k=d0+':'+countAsOf(oldFrom);if(!seen[k]){seen[k]=true;n++;}}
       }
@@ -1682,13 +2057,14 @@ function rebalanceRestByTransfer(result,y,m,mkey){
         var beforeTo=restTotal(to),beforeFrom=restTotal(from),beforeConsec=Math.max(maxConsec(to),maxConsec(from));
         result[to][d0]=move.shift;result[from][d0]='休';
         setWorkUnitCode(mkey,to,d0,move.unit);setWorkUnitCode(mkey,from,d0,null);
-        var afterTo=restTotal(to),afterFrom=restTotal(from),afterConsec=Math.max(maxConsec(to),maxConsec(from));
+        var afterTo=restTotal(to),afterFrom=restTotal(from),afterToConsec=maxConsec(to),afterFromConsec=maxConsec(from),afterConsec=Math.max(afterToConsec,afterFromConsec);
+        var overConsecLimit=afterToConsec>maxConsecOf(staff[to])||afterFromConsec>maxConsecOf(staff[from]);
         var improves=Math.abs(afterTo-target(to))<Math.abs(beforeTo-target(to))
           &&Math.abs(afterFrom-target(from))<Math.abs(beforeFrom-target(from));
-        if(!improves||afterConsec>5||afterConsec>beforeConsec){
+        if(!improves||overConsecLimit||afterConsec>beforeConsec){
           result[to][d0]='休';result[from][d0]=move.shift;
           setWorkUnitCode(mkey,to,d0,null);setWorkUnitCode(mkey,from,d0,move.unit);
-          addBlocked(afterConsec>5||afterConsec>beforeConsec?'連勤上限':'休日差が改善しない');continue;
+          addBlocked(overConsecLimit||afterConsec>beforeConsec?'連勤上限':'休日差が改善しない');continue;
         }
         report.accepted++;report.moves.push({day:d0+1,shift:move.shift,unit:move.unit,to:to,from:from});
         changed=true;break outer;
@@ -1705,7 +2081,7 @@ function generateShift(options){
     loadAll();loadShiftCodes();
     if(!staff.length){document.getElementById('shiftMsg').textContent='職員マスターに職員が登録されていません。';return;}
     var outerKey=shiftYear+'-'+(shiftMonth+1),baseUnits=copyJson(chuuritsuUnit),baseWarnings=copyJson(genWarnings),baseGenerated=copyJson(generatedShift);
-    var priorityScales=[0,0,0,0,0,0,0,0,0.01,0.02,0.04,0.06,0.08,0.1,0.15,0.25,0.5,1];
+    var priorityScales=[0,0,0,0,0,0,0,0,0.01,0.02,0.04,0.06,0.08,0.1,0.15,0.25,0.5,1,0,0,0,0,0,0,0,0,0.01,0.02,0.04,0.06];
     var best=null,candidateCount=priorityScales.length;
     for(var trial=0;trial<candidateCount;trial++){
       chuuritsuUnit=copyJson(baseUnits);genWarnings=copyJson(baseWarnings);generatedShift=copyJson(baseGenerated);
@@ -1738,7 +2114,7 @@ function generateShift(options){
     result.push(arr);
   }
 
-  // 固定セル（手動ロック・希望休・有休・希望シフト）をプリセット
+  // 固定セル（希望休・有休・希望シフト）をプリセット
   var mkey=y+'-'+(m+1);
   var previousWorkUnits=copyJson(chuuritsuUnit[mkey]||{});
   chuuritsuUnit[mkey]={};
@@ -1746,18 +2122,9 @@ function generateShift(options){
   for(var i=0;i<n;i++){
     for(var d=1;d<=days;d++){
       var k=getKibouForShift(i,y,m,d);
-      // 希望休・有休は絶対に変更しない（ロックより優先）
+      // 希望休・有休は絶対に変更しない
       if(k&&(k.type==='休'||k.type==='有休')){
         result[i][d-1]=k.type==='休'?'希望休':'有休';
-        continue;
-      }
-      // 手動ロック
-      if(isLocked(mkey,i,d-1)){
-        var prev=generatedShift[mkey];
-        if(prev&&prev[i]&&prev[i][d-1]){
-          result[i][d-1]=prev[i][d-1];
-          if(previousWorkUnits[i]&&previousWorkUnits[i][d-1])setWorkUnitCode(mkey,i,d-1,previousWorkUnits[i][d-1]);
-        }
         continue;
       }
       // 希望シフトはそのまま固定（勤務制限との衝突は表示時に警告）
@@ -1869,10 +2236,10 @@ function generateShift(options){
     // 翌々日は強制ブロックなし（なるべく休みは基本休日数ロジックで対応）
     // 夜勤翌日に夜勤は不可（明け翌日）
     if(d>=2&&result[si][d-2]==='明/休') return false;
-    // 連勤チェック（5連勤上限）
+    // 連勤チェック（職員別の最大連勤）
     if(shift!=='休'&&shift!=='希望休'&&shift!=='有休'){
-      var consec=0;
-      for(var dd=d-1;dd>=1&&consec<5;dd--){
+      var consec=0,consecLimit=maxConsecOf(s);
+      for(var dd=d-1;dd>=1&&consec<consecLimit;dd--){
         var prev=result[si][dd-1];
         if(prev&&prev!=='休'&&prev!=='希望休'&&prev!=='有休'&&prev!=='明/休') consec++;
         else break;
@@ -1884,7 +2251,7 @@ function generateShift(options){
         if(next&&next!=='休'&&next!=='希望休'&&next!=='有休'&&next!=='明/休')forward++;
         else break;
       }
-      if(consec+1+forward>5) return false;
+      if(consec+1+forward>consecLimit) return false;
     }
     // 夜勤連続2回まで・月6回まで
     if(shift==='夜勤'){
@@ -1931,13 +2298,14 @@ function generateShift(options){
     // 基本勤務が選ばれていれば、入れられる日は必ずそのコードにする
     var bs=baseFills[si];
     if(bs&&canAssign(si,d,bs)) return bs;
-    var best='',bestCount=0;
+    var best=[],bestCount=Infinity;
     for(var k=0;k<list.length;k++){
       if(!canAssign(si,d,list[k])) continue;
       var cnt=countShift(si,list[k]);
-      if(best===''||cnt<bestCount){best=list[k];bestCount=cnt;}
+      if(cnt<bestCount){best=[list[k]];bestCount=cnt;}
+      else if(cnt===bestCount)best.push(list[k]);
     }
-    return best;
+    return best.length?best[Math.floor(Math.random()*best.length)]:'';
   }
 
   // 候補者の負担点。兼務職員はユニット別回数と夜勤・早出・遅出の負担差も比較する。
@@ -1983,7 +2351,7 @@ function generateShift(options){
 
   // 夜勤を先に配置（ユニットごと1名/日）
   // 基本休日数に対する残り必要休日数（d日目時点）
-  // 月全体で確定済みの休日（割当済みの休み＋先の希望休・有休・明/休・ロック等）を数える。夜勤そのものは数えない
+  // 月全体で確定済みの休日（割当済みの休み＋先の希望休・有休・明/休等）を数える。夜勤そのものは数えない
   // 明/休の翌日は勤務を入れられず必ず休になるため、先の分も休日として見込む
   function restStatus(si,d){
     var restUsed=0,remainDays=0;
@@ -2017,13 +2385,13 @@ function generateShift(options){
       var okToday=unitStaff.filter(function(x){return canAssign(x.i,d,'夜勤');});
       var cands=okToday.filter(function(x){return canPlaceAke(x.i,d);});
       if(!cands.length){
-        // 希望・ロックは壊さず、配置できなかった理由を記録
+        // 希望入力は壊さず、配置できなかった理由を記録
         var reason;
         if(okToday.length){
           reason='夜勤に入れる職員（'+okToday.map(function(x){return staff[x.i].name;}).join('・')
-            +'）は翌日に希望休・有休・ロック等の固定があり、夜勤明けを入れられません';
+            +'）は翌日に希望休・有休等の固定があり、夜勤明けを入れられません';
         } else {
-          reason='夜勤に入れる職員がいません（希望・ロックで固定済み、勤務制限、夜勤回数・連勤の上限など）';
+          reason='夜勤に入れる職員がいません（希望入力で固定済み、勤務制限、夜勤回数・連勤の上限など）';
         }
         genWarnings[mkey].push({d:d,unit:ucode==='S'?'さくら':'けやき',reason:reason});
         continue;
@@ -2138,9 +2506,13 @@ function generateShift(options){
         var afterAke=d>=2&&result[i][d-2]==='明/休';
         // 1日は「その日より前の休み実績」が無く、必ず遅れと判定されてしまうため対象外にする
         var restDue=d>1&&restNeeded>0&&restProgress+0.01<expectedByToday&&!wouldThirdRest;
-        if(forceRest||afterAke||restDue)result[i][d-1]='休';
+        // 日勤のみ職員は、今日を「日」にしても休日数・連勤条件を守れる場合だけ、同等な休日候補として抽選する
+        var canDayWork=staff[i].type==='日勤'&&canAssign(i,d,'日');
+        var randomDayRest=canDayWork&&restNeeded>0&&restNeeded<remainDays&&!wouldThirdRest
+          &&Math.random()<restNeeded/remainDays;
+        if(forceRest||afterAke||restDue||randomDayRest)result[i][d-1]='休';
         else if(baseFills[i]&&canAssign(i,d,baseFills[i]))result[i][d-1]=baseFills[i];
-        else if(staff[i].type==='日勤'&&canAssign(i,d,'日'))result[i][d-1]='日';
+        else if(canDayWork)result[i][d-1]='日';
         else result[i][d-1]='休';
       }
     }
@@ -2162,10 +2534,12 @@ function generateShift(options){
     var targetWork=Math.max(0,days-(staff[ai].baserest||8)-akeCnt*0.5);
     var needWork=Math.max(0,Math.min(empties.length,Math.round(targetWork-workCnt)));
     var restQuota=empties.length-needWork;
+    // 休日間隔は従来どおり均等に保ち、同等な並びの開始位置だけを候補ごとに変える
+    var restPhase=Math.floor(Math.random()*empties.length);
     var placed=0,notFilled=[];
     for(var ei=0;ei<empties.length;ei++){
       // 休みは空き日に均等に散らし、連勤・連休の偏りを避ける
-      var isRest=Math.floor((ei+1)*restQuota/empties.length)>Math.floor(ei*restQuota/empties.length);
+      var isRest=Math.floor(((ei+1)*restQuota+restPhase)/empties.length)>Math.floor((ei*restQuota+restPhase)/empties.length);
       var fillCode=isRest?'':pickFillCode(ai,empties[ei]+1);
       if(fillCode){result[ai][empties[ei]]=fillCode;placed++;}
       else{result[ai][empties[ei]]='休';if(!isRest)notFilled.push(empties[ei]);}
@@ -2222,6 +2596,20 @@ function generateShift(options){
   return {result:copyJson(result),units:copyJson(chuuritsuUnit[key]||{}),warnings:copyJson(genWarnings[key]||[]),quality:quality,rebalance:copyJson(rebalance)};
 }
 
+// 職員マスターから削除済みでも、過去勤務表に保存した氏名と勤務行は読み取り専用で表示する
+function archivedShiftRows(mkey){
+  if(!isIdMode()) return [];
+  try{
+    var shifts=readIdJson(STORAGE_SHIFT_V2),units=readIdJson(STORAGE_UNIT_V2);
+    var month=shifts&&shifts.months&&shifts.months[mkey];
+    var archived=(month&&month.archivedStaff)||{};
+    var unitMonth=(units&&units.months&&units.months[mkey])||{};
+    return Object.keys(archived).filter(function(id){return month.rows&&Array.isArray(month.rows[id]);}).map(function(id){
+      return {id:id,staff:archived[id],row:month.rows[id],units:unitMonth[id]||{}};
+    });
+  }catch(e){return [];}
+}
+
 function renderShiftTable(result,y,m){
   loadShiftCodes();
   var days=getDaysInMonth(y,m);
@@ -2274,18 +2662,19 @@ function renderShiftTable(result,y,m){
       var yakCount=0,workCount=0;
       for(var d=1;d<=days;d++){
         var sh=cellAt(result,si,d-1);
-        var clocked=isLocked(mkey,si,d-1);
-        var ckibou=!clocked&&isKibouFixed(si,y,m,d);
+        var ckibou=isKibouFixed(si,y,m,d);
         var kibouWork=ckibou&&sh!=='希望休';
-        var tdCls=clocked?' class="cell-locked"':kibouWork?' class="cell-kibou"':'';
-        var mark=clocked?'<span class="lock-mark">🔒</span>':kibouWork?'<span class="kibou-mark">★</span>':'';
+        var kibouEntry=getKibouForShift(si,y,m,d);
+        var requestedWork=!!(kibouEntry&&kibouEntry.type==='shift');
+        var hasKibouFrame=kibouWork||sh==='希望休';
+        var tdCls=hasKibouFrame?' class="cell-kibou'+(requestedWork?' cell-kibou-work':'')+'"':'';
         var displayUnit=actualWorkUnitCode(mkey,si,d-1,sh);
         var unitPfx=workplaceDisplayPrefix(s,displayUnit,sh);
         if(sh===''){
           row+='<td'+tdCls+' style="cursor:pointer" onclick="openShiftEditModal('+si+','+(d-1)+','+y+','+m+')" title="クリックして夜勤を入力"></td>';
           continue;
         }
-        row+='<td'+tdCls+' style="cursor:pointer" onclick="openShiftEditModal('+si+','+(d-1)+','+y+','+m+')" title="'+(clocked?'ロック済み':ckibou?'希望で固定':'クリックして編集')+'">'+scTagUnit(sh,unitPfx)+mark+'</td>';
+        row+='<td'+tdCls+' style="cursor:pointer" onclick="openShiftEditModal('+si+','+(d-1)+','+y+','+m+')" title="'+(ckibou?'希望で固定':'クリックして編集')+'">'+scTagUnit(sh,unitPfx,requestedWork)+'</td>';
         if(sh==='夜勤') yakCount++;
         if(needsWorkUnit(sh)) workCount++;
       }
@@ -2306,7 +2695,8 @@ function renderShiftTable(result,y,m){
         if(needsWorkUnit(sh)){consec++;maxConsec=Math.max(maxConsec,consec);restRun=0;}
         else{consec=0;if(getRestValue(sh)>=1){restRun++;maxRestRun=Math.max(maxRestRun,restRun);}else restRun=0;}
       }
-      if(maxConsec>5) wStaff(s.name,'連勤',maxConsec+'連勤');
+      var consecLimit=maxConsecOf(s);
+      if(maxConsec>consecLimit) wStaff(s.name,'連勤',maxConsec+'連勤（上限'+consecLimit+'日）');
       if(maxRestRun>2) wStaff(s.name,'連休',maxRestRun+'連休');
       if(yakCount>6) wStaff(s.name,'夜勤回数','夜勤'+yakCount+'回（上限6回）');
       if(result[si].every(function(v){return v===null;})&&!isNightOnlyStaff(s)) wStaff(s.name,'その他','シフト作成後に追加（再生成で反映）');
@@ -2318,7 +2708,7 @@ function renderShiftTable(result,y,m){
         if(fkb&&(fkb.type==='休'||fkb.type==='有休'))fixedOff++;
         else if((fkb&&fkb.type==='shift')||isLocked(mkey,si,fd-1))fixedWork++;
       }
-      var restCause='（必須人数・夜勤明け・希望/ロックなどの固定条件を優先した結果。固定休'+fixedOff+'日、固定勤務'+fixedWork+'日）';
+      var restCause='（必須人数・夜勤明け・希望入力などの固定条件を優先した結果。固定休'+fixedOff+'日、固定勤務'+fixedWork+'日）';
       if(!nightOnly&&rs.total<baserest) wStaff(s.name,'休日','休みが'+(baserest-rs.total)+'日足りない');
       if(!nightOnly&&rs.total>baserest){
         // 勤務制限ありの職員は、どのコードが勤務可能だったかを短く添える
@@ -2370,25 +2760,25 @@ function renderShiftTable(result,y,m){
         if(kb){
           var want=kb.type==='休'?'希望休':kb.type==='有休'?'有休':kb.type==='shift'?kb.shift:null;
           if(want&&cur!==want){
-            wStaff(s.name,'希望・ロック',dLabel+' 希望'+want+'→'+cur);
+            wStaff(s.name,'希望入力',dLabel+' 希望'+want+'→'+cur);
           }
           if(kb.type==='shift'){
             var ws=kb.shift;
             var ngw=ngShiftHit(s,ws);
             if(ngw)
-              wStaff(s.name,'希望・ロック',dLabel+' 希望'+ws+'はNG'+(ngw!==ws?'（'+ngw+'）':''));
+              wStaff(s.name,'希望入力',dLabel+' 希望'+ws+'はNG'+(ngw!==ws?'（'+ngw+'）':''));
             if(autoShiftTypeConflict(s,ws))
-              wStaff(s.name,'希望・ロック',dLabel+' 希望'+ws+'は勤務形態と不一致');
+              wStaff(s.name,'希望入力',dLabel+' 希望'+ws+'は勤務形態と不一致');
             if(s.ngDow&&s.ngDow.indexOf(getDow(y,m,d))>=0)
-              wStaff(s.name,'希望・ロック',dLabel+' 希望'+ws+'は休み希望曜日');
+              wStaff(s.name,'希望入力',dLabel+' 希望'+ws+'は休み希望曜日');
           }
         }
         // 希望シフト以外で入っている勤務（手動修正・ロック等）のNGシフト・勤務形態チェック
         if(!(kb&&kb.type==='shift'&&kb.shift===cur)){
           var ngc=ngShiftHit(s,cur);
-          if(ngc) wStaff(s.name,'希望・ロック',dLabel+' '+cur+'はNG'+(ngc!==cur?'（'+ngc+'）':''));
+          if(ngc) wStaff(s.name,'希望入力',dLabel+' '+cur+'はNG'+(ngc!==cur?'（'+ngc+'）':''));
           else if(autoShiftTypeConflict(s,cur))
-            wStaff(s.name,'希望・ロック',dLabel+' '+cur+'は勤務形態と不一致');
+            wStaff(s.name,'希望入力',dLabel+' '+cur+'は勤務形態と不一致');
         }
         if(cur==='夜勤'&&d<days){
           var nx=cellAt(result,si,d);
@@ -2398,6 +2788,29 @@ function renderShiftTable(result,y,m){
       }
     });
   });
+
+  // 削除済み職員は現在の作成・編集対象には戻さず、保存済みの過去記録だけを表示する
+  var archivedRows=archivedShiftRows(mkey);
+  if(archivedRows.length){
+    tbody+='<tr><td colspan="'+(days+8)+'" class="unit-head">削除済み職員（過去記録）</td></tr>';
+    archivedRows.forEach(function(a){
+      var s=a.staff||{},row=a.row||[];
+      var html='<tr><td class="name-cell">'+escHtml(s.name||'氏名不明')+'<span class="emp">削除済み</span></td>';
+      var yakCount=0,workCount=0;
+      for(var ad=0;ad<days;ad++){
+        var sh=row[ad]||(isNightOnlyStaff(s)?'':'休');
+        var unitPfx=workplaceDisplayPrefix(s,a.units[ad],sh);
+        html+='<td>'+(sh?scTagUnit(sh,unitPfx):'')+'</td>';
+        if(sh==='夜勤') yakCount++;
+        if(needsWorkUnit(sh)) workCount++;
+      }
+      var rs=sumRestDays(row,days,!isNightOnlyStaff(s));
+      var leaveDays=countLeaveDays(row,days);
+      html+='<td>'+yakCount+'</td><td>'+workCount+'</td><td>'+rs.full+'</td><td>'+rs.halfTimes+'</td><td>'+rs.total+'</td>'
+        +'<td>'+(leaveDays||'')+'</td><td>'+(rs.total+leaveDays)+'</td></tr>';
+      tbody+=html;
+    });
+  }
 
   // 必須勤務を、実勤務先を使って全日・ユニット別に再検証する
   var requiredByUnit=['早1','日3','遅','夜勤'];
@@ -2436,7 +2849,7 @@ function renderShiftTable(result,y,m){
     var head=w.unit+'：'+w.shift+(w.kind==='不足'?'が'+w.count+'名不足':'が'+w.count+'名（必要1名）');
     return head+' — '+joinDays(w.days,8);
   });
-  var staffCats=['休日','基本勤務','連勤','連休','夜勤回数','夜勤明け','希望・ロック','その他'];
+  var staffCats=['休日','基本勤務','連勤','連休','夜勤回数','夜勤明け','希望入力','その他'];
   var staffLines=warnStaffOrder.map(function(name){
     var parts=[];
     staffCats.forEach(function(cat){
@@ -2518,7 +2931,7 @@ function renderShiftTable(result,y,m){
   }).join('');
   var qualityHtml='<div class="form-card" style="margin-bottom:12px;padding:10px 12px;font-size:12px">'
     +'<div style="font-weight:600;margin-bottom:5px">生成結果の確認 <span style="font-weight:400;color:#777">（'+candidateLabel+'）</span></div>'
-    +'<div>必須勤務の不足 <b>'+quality.shortage+'</b>人日 ／ 休日数の差 合計 <b>'+quality.restDiff+'</b>日 ／ 5日超の連勤超過 <b>'+quality.consecPenalty+'</b>日 ／ 2日超の連休超過 <b>'+quality.longRest+'</b>日</div>'
+    +'<div>必須勤務の不足 <b>'+quality.shortage+'</b>人日 ／ 休日数の差 合計 <b>'+quality.restDiff+'</b>日 ／ 最大連勤超過 <b>'+quality.consecPenalty+'</b>日 ／ 2日超の連休超過 <b>'+quality.longRest+'</b>日</div>'
     +(dualRows?'<div style="margin-top:7px;font-weight:600">中立兼務の配置回数</div><table><tr><th style="text-align:left">氏名</th><th>さくら</th><th>けやき</th><th>さ負担</th><th>け負担</th><th></th></tr>'+dualRows+'</table>':'')
     +'</div>';
 
@@ -2666,8 +3079,7 @@ function openShiftEditModal(si,dIdx,y,m){
   var dateStr=y+'年'+(m+1)+'月'+(dIdx+1)+'日（'+dowNames[dow]+'）';
   loadShiftCodes();
   var ALL_OPTS=manualEditOptions(current,s);
-  var locked=isLocked(key,si,dIdx);
-  var kfixed=!locked&&isKibouFixed(si,y,m,dIdx+1);
+  var kfixed=isKibouFixed(si,y,m,dIdx+1);
   var curUnit=actualWorkUnitCode(key,si,dIdx,current)||savedWorkUnitCode(key,si,dIdx)||unitCode(s.unit);
 
   document.body.style.overflow='hidden';
@@ -2714,13 +3126,8 @@ function openShiftEditModal(si,dIdx,y,m){
       :'')
     +(restOpts.length?'<div class="opt-others" style="margin-top:10px;border-top:1px solid #eee;padding-top:10px">'+restOpts.join('')+'</div>':'');
 
-  var lockInfo=locked
-    ?'<div style="margin-bottom:10px;font-size:12px;color:#1B6B45;background:#f0faf4;padding:6px 10px;border-radius:6px">🔒 手動ロック済み — 再生成で変わりません</div>'
-    :kfixed
+  var fixedInfo=kfixed
     ?'<div style="margin-bottom:10px;font-size:12px;color:#c09030;background:#fff9f0;padding:6px 10px;border-radius:6px">★ 希望入力で固定 — 再生成で変わりません</div>'
-    :'';
-  var unlockBtn=locked
-    ?'<button class="btn btn-sm" style="margin-right:auto" onclick="unlockAndClose('+si+','+dIdx+','+y+','+m+')">🔓 解除</button>'
     :'';
   var unitPicker='<div style="border-top:1px solid #eee;padding-top:10px;margin-top:4px">'
     +'<div style="font-size:12px;font-weight:600;margin-bottom:5px">実際の勤務先（勤務を選ぶ場合は必須）</div>'
@@ -2731,22 +3138,12 @@ function openShiftEditModal(si,dIdx,y,m){
   bd.innerHTML='<div class="modal modal-wide">'
     +'<div class="modal-title">'+s.name+'</div>'
     +'<div class="modal-date">'+dateStr+'</div>'
-    +lockInfo
+    +fixedInfo
     +'<div style="margin-bottom:12px;max-height:58vh;overflow-y:auto">'+opts+unitPicker+'</div>'
     +'<div class="modal-btns">'
-    +unlockBtn
     +'<button class="btn" onclick="document.getElementById(\'shiftEditBackdrop\').remove();document.body.style.overflow=\'\'">閉じる</button>'
     +'</div></div>';
   document.body.appendChild(bd);
-}
-
-function unlockAndClose(si,dIdx,y,m){
-  var key=y+'-'+(m+1);
-  setLock(key,si,dIdx,false);
-  var bd=document.getElementById('shiftEditBackdrop');
-  if(bd)bd.remove();
-  document.body.style.overflow='';
-  renderShiftTable(generatedShift[key],y,m);
 }
 
 // 翌日のセル位置（月末なら翌月の1日）。翌月の勤務表が無い場合は null
@@ -2765,7 +3162,6 @@ function setAkeAfterNight(key,si,dIdx,unitCodeValue){
   if(cur!==null&&cur!=='明/休'&&cur!=='') return false; // ほかの勤務が入っていれば触らない
   generatedShift[nx.key][si][nx.d]='明/休';
   if(unitCodeValue)setWorkUnitCode(nx.key,si,nx.d,unitCodeValue);
-  setLock(nx.key,si,nx.d,true);
   return true;
 }
 function clearAkeAfterNight(key,si,dIdx){
@@ -2774,7 +3170,6 @@ function clearAkeAfterNight(key,si,dIdx){
   if(generatedShift[nx.key][si][nx.d]!=='明/休') return;
   generatedShift[nx.key][si][nx.d]=null;
   setWorkUnitCode(nx.key,si,nx.d,null);
-  setLock(nx.key,si,nx.d,false);
 }
 function applyShiftEdit(si,dIdx,y,m){
   var sel=document.querySelector('input[name=sedit]:checked');
@@ -2802,8 +3197,6 @@ function applyShiftEdit(si,dIdx,y,m){
   }
   saveGeneratedShift();
   saveChuuritsuUnit();
-  if(nightOnly&&sel.value===''){setLock(key,si,dIdx,false);}
-  else setLock(key,si,dIdx,true);
   var bd=document.getElementById('shiftEditBackdrop');
   if(bd) bd.remove();
   document.body.style.overflow='';
@@ -2812,7 +3205,6 @@ function applyShiftEdit(si,dIdx,y,m){
 }
 
 function clearGeneratedShift(){
-  if(!confirm('生成済みシフトとロック情報をリセットしますか？'))return;
   var key=shiftYear+'-'+(shiftMonth+1);
   delete generatedShift[key];
   delete lockedCells[key];
@@ -2998,14 +3390,13 @@ function manualEditOptions(current,s){
   var allowed=s?allowedShiftCodesOf(s):null;
   function canPickWork(code){
     if(!allowed) return true;
+    if(isAdditionalShiftCode(code)) return customShiftCodesOf(s).indexOf(code)>=0;
     if(allowed.indexOf(code)<0) return false;
-    // 勤務制限あり以外は、勤務形態で決まる既存コードだけを出す
-    // （追加コードは「勤務可能なシフト」で選んだ職員にだけ出す）
-    if(s.type!=='制限あり'&&!isBuiltinCode(code)) return false;
     return true;
   }
   shiftCodes.forEach(function(c){
     if(!c.active&&c.code!==current) return;
+    if(isAdditionalShiftCode(c.code)&&!canPickWork(c.code)&&c.code!==current) return;
     if(needsWorkUnit(c.code)&&!canPickWork(c.code)&&c.code!==current) return;
     // 夜勤を勤務可能にしていない職員には「明/休」を出さない（すでに入っている場合は残す）
     if(c.code==='明/休'&&allowed&&!canPickWork('夜勤')&&c.code!==current) return;
@@ -3024,6 +3415,9 @@ function escHtml(v){
 function isSystemCode(code){return SYSTEM_CODES.indexOf(code)>=0;}
 function isBuiltinCode(code){return BUILTIN_CODES.indexOf(code)>=0;}
 function isLeaveCode(code){return LEAVE_CODES.indexOf(code)>=0;}
+function isAdditionalShiftCode(code){
+  return !!getCodeInfo(code)&&!isBuiltinCode(code)&&!isLeaveCode(code);
+}
 // 既定で用意するコード（削除・コード名変更はできない）
 function isProtectedCode(code){return isBuiltinCode(code)||isLeaveCode(code);}
 
@@ -3332,6 +3726,7 @@ function deleteShiftCode(idx){
   var c=shiftCodes[idx];
   if(!c||isProtectedCode(c.code)) return; // 既定のシステムコード・休暇コードは従来どおり削除できない
   var ngStaff=(staff||[]).filter(function(s){return s.ngShifts&&s.ngShifts.indexOf(c.code)>=0;});
+  var customStaff=(staff||[]).filter(function(s){return Array.isArray(s.customShiftCodes)&&s.customShiftCodes.indexOf(c.code)>=0;});
   var baseStaff=(staff||[]).filter(function(s){return s.baseShift===c.code;});
   var impact=codeDeleteImpact(c.code);
   var inUse=impact.cells.length||impact.wishes.length;
@@ -3342,11 +3737,13 @@ function deleteShiftCode(idx){
       +'・希望勤務：'+impact.wishes.length+'件\n'
       +(impact.locks?'・ロック済み：'+impact.locks+'マス（ロックを解除します）\n':'')
       +(ngStaff.length?'・職員'+ngStaff.length+'名の勤務可能なシフト設定\n':'')
+      +(customStaff.length?'・職員'+customStaff.length+'名の追加勤務コード設定\n':'')
       +(baseStaff.length?'・職員'+baseStaff.length+'名の基本勤務の設定（未設定に戻します）\n':'')
       +'\n該当する勤務が空欄になり、再設定が必要です。\n\n実行しますか？')) return;
   } else {
     if(!confirm('勤務コード「'+c.code+'」を削除しますか？'
       +(ngStaff.length?'\n職員'+ngStaff.length+'名の勤務可能なシフトの設定からも、一緒に削除します。':'')
+      +(customStaff.length?'\n職員'+customStaff.length+'名の追加勤務コード設定からも、一緒に削除します。':'')
       +(baseStaff.length?'\n職員'+baseStaff.length+'名の基本勤務は、未設定に戻します。':''))) return;
   }
   shiftCodes.splice(idx,1);
@@ -3370,7 +3767,10 @@ function deleteShiftCode(idx){
       s.ngShifts=s.ngShifts.filter(function(x){return x!==c.code;});
     });
   }
-  if(ngStaff.length||baseStaff.length){
+  customStaff.forEach(function(s){
+    s.customShiftCodes=s.customShiftCodes.filter(function(x){return x!==c.code;});
+  });
+  if(ngStaff.length||customStaff.length||baseStaff.length){
     saveStaffStorage();
     renderStaffList();
   }
@@ -3483,7 +3883,7 @@ function summarizeShiftToolValue(key,raw){
   return null;
 }
 
-// opts（省略可）：areaId=結果の表示先、filePrefix=ファイル名の先頭、requireComplete=不完全なら書き出さない
+// opts（省略可）：areaId=結果の表示先、filePrefix=ファイル名の先頭、requireComplete=不完全なら書き出さない、returnText=ダウンロードせずJSON文字列を返す
 // 戻り値：{ok:完全なバックアップのダウンロードを開始できたか, fileName, snapshot:書き出した時点の保存データ}
 function exportFullBackup(opts){
   opts=opts||{};
@@ -3559,6 +3959,8 @@ function exportFullBackup(opts){
       required:required,jsonWarnings:jsonWarnings,readErrors:readErrors,listError:before.listError,extraKeys:[]});
     return {ok:false};
   }
+
+  if(opts.returnText) return {ok:complete,text:text,snapshot:before};
 
   var fileName=(opts.filePrefix||'shift_full_backup_')+localStamp(now,true)+(complete?'':'_INCOMPLETE')+'.json';
   var started=false,downloadError=null,byteSize=text.length;
@@ -3720,6 +4122,12 @@ function checkRestoreStructure(key,o){
     else Object.keys(o.months).forEach(function(mk){
       var m=o.months[mk];
       if(!RE_MONTH.test(mk)||!isPlainObject(m)||typeof m.days!=='number'||!isPlainObject(m.rows)){errs.push('勤務表（固定ID）の形式が正しくありません');return;}
+      if(m.archivedStaff!==undefined&&!isPlainObject(m.archivedStaff)) errs.push('削除済み職員情報の形式が正しくありません');
+      Object.keys(m.archivedStaff||{}).forEach(function(id){
+        var s=m.archivedStaff[id];
+        if(!ID_PATTERN.test(id)||!isPlainObject(s)||typeof s.name!=='string'||['さくら','けやき','中立兼務'].indexOf(s.unit)<0||!m.rows.hasOwnProperty(id))
+          errs.push('削除済み職員情報の形式が正しくありません');
+      });
       Object.keys(m.rows).forEach(function(id){
         var r=m.rows[id];
         if(!ID_PATTERN.test(id)||!Array.isArray(r)||r.length!==m.days||!r.every(function(c){return c===null||typeof c==='string';}))
@@ -3742,12 +4150,16 @@ function checkIdBackupConsistency(entries){
   try{
     var ids={};
     JSON.parse(entries[STORAGE_STAFF_V2].value).staff.forEach(function(s){ids[s.id]=true;});
+    var g=JSON.parse(entries[STORAGE_SHIFT_V2].value).months,archived={};
+    Object.keys(g).forEach(function(mk){archived[mk]=g[mk].archivedStaff||{};});
     [STORAGE_KIBOU_V2,STORAGE_LOCK_V2,STORAGE_UNIT_V2].forEach(function(k){
       var m=JSON.parse(entries[k].value).months;
-      Object.keys(m).forEach(function(mk){Object.keys(m[mk]).forEach(function(id){if(!ids[id]) errs.push(FULL_BACKUP_LABELS[k]+'：職員マスターにいない職員IDのデータがあります');});});
+      Object.keys(m).forEach(function(mk){Object.keys(m[mk]).forEach(function(id){
+        var pastUnit=k===STORAGE_UNIT_V2&&archived[mk]&&archived[mk][id];
+        if(!ids[id]&&!pastUnit) errs.push(FULL_BACKUP_LABELS[k]+'：職員マスターにいない職員IDのデータがあります');
+      });});
     });
-    var g=JSON.parse(entries[STORAGE_SHIFT_V2].value).months;
-    Object.keys(g).forEach(function(mk){Object.keys(g[mk].rows).forEach(function(id){if(!ids[id]) errs.push('生成済み勤務表（固定ID）：職員マスターにいない職員IDのデータがあります');});});
+    Object.keys(g).forEach(function(mk){Object.keys(g[mk].rows).forEach(function(id){if(!ids[id]&&!(archived[mk]&&archived[mk][id])) errs.push('生成済み勤務表（固定ID）：職員マスターにいない職員IDのデータがあります');});});
   }catch(e){errs.push('固定ID形式のデータを確認できませんでした');}
   return errs.filter(function(e,i){return errs.indexOf(e)===i;});
 }
@@ -3873,23 +4285,24 @@ function restoreBackupCounts(b){
    保存データが空の端末では確認を出さず、実データがある場合だけ1回確認する。
    書き込みは従来どおり performRestore（検証つき・失敗時は巻き戻し）を使うので、
    職員固定ID・勤務表・ロック・希望休の紐づけはそのまま保たれる。 */
-function handleRestoreFileText(text,fileName){
+function handleRestoreFileText(text,fileName,opts){
+  opts=opts||{};
   restoreState=null;
   var v=validateRestoreBackup(text);
-  if(!v.ok){showRestoreError(v.errors,fileName);return;}
+  if(!v.ok){showRestoreError(v.errors,fileName);return false;}
   var current=readShiftToolStorage();
   if(!current.ok){
     showRestoreError(['このブラウザの保存データを読み取れないため、安全に読み込めません。',
       'プライベートブラウズや、アプリ内ブラウザ（SlackやLINEの中）で開いていると起きます。SafariやChromeで開き直してからお試しください。'],fileName);
-    return;
+    return false;
   }
   var backupIsId=v.backup.entries.hasOwnProperty(STORAGE_ID_MIGRATION);
   if(current.values.hasOwnProperty(STORAGE_ID_MIGRATION)&&!backupIsId){
-    showRestoreError(['このブラウザのデータは職員固定ID形式に移行済みです。移行前の形式のファイルは、職員の対応がずれる危険があるため読み込めません'],fileName);return;
+    showRestoreError(['このブラウザのデータは職員固定ID形式に移行済みです。移行前の形式のファイルは、職員の対応がずれる危険があるため読み込めません'],fileName);return false;
   }
   var cnt=restoreBackupCounts(v.backup);
   // 実データがあるときだけ、1回だけ確認する
-  if(shiftToolHasRealData(current)){
+  if(shiftToolHasRealData(current)&&!opts.skipConfirm){
     var ok=confirm('このブラウザに保存されている今のデータを、読み込んだファイルの内容に置き換えます。\n\n'
       +'ファイル：'+(fileName||'')+'\n'
       +'保存日時：'+(v.backup.exportedAtLocal||v.backup.exportedAt||'不明')+'\n'
@@ -3904,10 +4317,10 @@ function handleRestoreFileText(text,fileName){
           +'<div style="margin-top:10px"><button class="btn btn-sm" onclick="cancelRestore()">閉じる</button></div>';
         p0.style.display='block';
       }
-      return;
+      return false;
     }
   }
-  applyRestoreNow(v.backup,current,fileName,cnt);
+  return applyRestoreNow(v.backup,current,fileName,cnt);
 }
 
 // 実際の書き込みと、画面の再描画
@@ -3919,7 +4332,7 @@ function applyRestoreNow(backup,current,fileName,cnt){
       :r.status==='rolledBack'?'読み込みに失敗したため、元の状態に戻しました。データは変更されていません。'
       :'読み込みに失敗し、元に戻すこともできませんでした。このままツールを操作せず、管理者にご連絡ください。';
     showRestoreError([msg,String(r.message||'')].filter(function(x){return x;}),fileName);
-    return;
+    return false;
   }
   // 職員マスター・希望休・勤務表・勤務コードをまとめて読み直して再描画する
   reloadStateAfterRestore();
@@ -3944,6 +4357,7 @@ function applyRestoreNow(backup,current,fileName,cnt){
       +'<button class="btn btn-sm btn-primary" onclick="location.reload()">画面を再読み込み</button></div>';
     p.style.display='block';
   }
+  return true;
 }
 function showRestoreError(errors,fileName){
   var p=document.getElementById('restorePanel');
@@ -4389,9 +4803,8 @@ function idMigrationExecute(){
 }
 
 /* ===== 職員の削除・試作データ（月）のリセット =====
-   固定ID形式のデータだけを対象にする。事前に全データのバックアップと保存完了の確認・承認を必須にし、
-   書き込み後に読み直して「対象以外が変わっていないこと」を確認する。失敗したら元に戻す */
-var REQUIRED_SHIFTS=['早1','日3','遅','夜勤','早2'];
+   固定ID形式のデータだけを対象にする。書き込み後に読み直して
+   「対象以外が変わっていないこと」を確認し、失敗したら元に戻す */
 var staffDelState=null,monthResetState=null;
 
 // 保存データの変更をまとめて行い、検証する。失敗したら元に戻す
@@ -4435,47 +4848,6 @@ function parseIdData(values){
 }
 var jsonEq=function(a,b){return JSON.stringify(a)===JSON.stringify(b);};
 
-// 勤務先ユニットにその勤務の担当がいるか（勤務先不明の中立兼務は数えない）
-function unitCoversShift(list,rows,unitRec,d0,unit,sh,skipId){
-  return list.some(function(s){
-    if(s.id===skipId) return false;
-    var row=rows(s);
-    if(!row||!row[d0]||countAsOf(row[d0])!==sh) return false;
-    if(unit==='全体') return true;
-    var rec=unitRec(s)||{},code=rec[d0];
-    if(code==='S'||code==='K') return code===(unit==='さくら'?'S':'K');
-    return false;
-  });
-}
-// 職員を削除すると担当がいなくなる必須勤務（月ごと）
-function staffDeleteShortages(D,target){
-  var out={};
-  Object.keys(D.shift.months).forEach(function(mk){
-    var m=D.shift.months[mk],row=m.rows[target.id];
-    if(!row) return;
-    var rec=(D.unit.months[mk]||{})[target.id]||{};
-    row.forEach(function(cell,d0){
-      var sh=cell?countAsOf(cell):null;
-      if(REQUIRED_SHIFTS.indexOf(sh)<0) return;
-      var unit=sh==='早2'?'全体':target.unit!=='中立兼務'?target.unit:rec[d0]==='S'?'さくら':rec[d0]==='K'?'けやき':'全体';
-      var covered=unitCoversShift(D.staff.staff,function(s){return m.rows[s.id];},function(s){return (D.unit.months[mk]||{})[s.id];},d0,unit,sh,target.id);
-      if(!covered)(out[mk]=out[mk]||[]).push({d:d0+1,unit:unit,shift:sh,reason:'職員の削除により担当がいなくなりました（再生成すると再配置されます）'});
-    });
-  });
-  return out;
-}
-function staffDataSummary(D,id){
-  var n=function(o){return o&&typeof o==='object'?Object.keys(o).length:0;};
-  var s={kibou:0,locks:0,units:0,shiftMonths:[]};
-  Object.keys(D.kibou.months).forEach(function(mk){s.kibou+=n(D.kibou.months[mk][id]);});
-  Object.keys(D.lock.months).forEach(function(mk){s.locks+=n(D.lock.months[mk][id]);});
-  Object.keys(D.unit.months).forEach(function(mk){s.units+=n(D.unit.months[mk][id]);});
-  Object.keys(D.shift.months).forEach(function(mk){
-    var r=D.shift.months[mk].rows[id];
-    if(r) s.shiftMonths.push({mk:mk,work:r.filter(function(c){return c&&['休','希望休','有休'].indexOf(c)<0;}).length});
-  });
-  return s;
-}
 function monthLabel(mk){var p=mk.split('-');return p[0]+'年'+p[1]+'月';}
 
 /* ---------- 職員の削除 ---------- */
@@ -4488,50 +4860,23 @@ function openStaffDeletePanel(id){
   try{D=parseIdData(snap.values);}catch(e){alert('保存データを読み取れないため削除できません');return;}
   var target=D.staff.staff.filter(function(s){return s.id===id;})[0];
   if(!target){alert('対象の職員が見つかりません');return;}
-  var sm=staffDataSummary(D,id);
-  var shortages=staffDeleteShortages(D,target);
-  var sameName=D.staff.staff.filter(function(s){return s.name===target.name;}).length;
-  var lines=[];
-  if(sm.shiftMonths.length) lines.push('・勤務表：'+sm.shiftMonths.map(function(x){return monthLabel(x.mk)+'（勤務'+x.work+'日）';}).join('、'));
-  if(sm.kibou) lines.push('・希望休、有休、希望シフト：'+sm.kibou+'件');
-  if(sm.locks) lines.push('・ロック：'+sm.locks+'件');
-  if(sm.units) lines.push('・勤務先の記録：'+sm.units+'件');
-  var shortTotal=0;
-  Object.keys(shortages).forEach(function(mk){shortTotal+=shortages[mk].length;});
-  var msg='職員「'+target.name+'」（'+target.unit+'）を削除しますか？\n'
-    +(sameName>1?'\n⚠ 同じ氏名の職員が'+sameName+'名います。職員ID '+id+' の方が対象です。\n':'')
-    +(lines.length?'\nこの職員の次のデータも削除されます。\n'+lines.join('\n')+'\n'
-                  :'\nこの職員に登録されているデータはありません。\n')
-    +(shortTotal?'\n⚠ 削除すると担当がいなくなる勤務が'+shortTotal+'日分あります（勤務表の警告に追加されます）。\n':'')
-    +'\nほかの職員のデータは変更しません。';
-  if(!confirm(msg)) return;   // キャンセル時は一切変更しない
-  staffDelState={id:id,label:target.name,unit:target.unit,done:false,resultHtml:''};
+  staffDelState={id:id,label:target.name,unit:target.unit,baseSnap:snap,done:false,resultHtml:''};
+  var old=document.getElementById('staffDeleteConfirm');if(old)old.remove();
+  var bd=document.createElement('div');bd.className='modal-backdrop';bd.id='staffDeleteConfirm';
+  bd.innerHTML='<div class="modal"><div class="modal-title">'+escHtml(target.name)+'さんを削除しますか？</div>'
+    +'<div class="modal-btns"><button class="btn" onclick="staffDeleteCancel()">いいえ</button>'
+    +'<button class="btn btn-danger" onclick="staffDeleteConfirmYes()">はい</button></div></div>';
+  document.body.appendChild(bd);
+}
+function staffDeleteConfirmYes(){
+  var st=staffDelState;if(!st)return;
+  var snap=st.baseSnap;
+  var bd=document.getElementById('staffDeleteConfirm');if(bd)bd.remove();
   staffDeleteExecute(snap);
 }
-// 削除の確認は confirm() で行うため、このパネルは結果表示のみに使う
 function renderStaffDeletePanel(){
-  var panel=document.getElementById('staffOpPanel'),st=staffDelState;
-  if(!panel) return;
-  if(!st){panel.innerHTML='';return;}
-  if(!st.done){panel.innerHTML='';return;}
-  var sm=st.summary,shortTotal=0;
-  var shortRows=Object.keys(st.shortages).map(function(mk){
-    var byShift={};st.shortages[mk].forEach(function(w){var k=w.unit+'の'+w.shift;byShift[k]=(byShift[k]||0)+1;});
-    shortTotal+=st.shortages[mk].length;
-    return '<li>'+monthLabel(mk)+'：'+Object.keys(byShift).map(function(k){return escHtml(k)+' '+byShift[k]+'日';}).join('・')+'</li>';
-  }).join('');
-  var html='<div class="form-card" style="font-size:13px;line-height:1.7;border-color:#e0a0a0">'
-    +'<div style="font-size:15px;font-weight:500">職員の削除（確認）</div>'
-    +'<div>対象：<b>'+escHtml(st.label)+'</b>（'+escHtml(st.unit)+'）　<span style="color:#999;font-size:11px">職員ID：'+escHtml(st.id)+'</span></div>'
-    +(st.sameName>1?'<div style="color:#856404">⚠ 同じ氏名の職員が'+st.sameName+'名います。職員IDとユニットで対象を確認してください。</div>':'')
-    +'<div style="margin-top:6px">一緒に削除されるこの職員のデータ：希望休・有休・希望シフト '+sm.kibou+'件／ロック '+sm.locks+'件／実勤務先 '+sm.units+'件'
-    +'／勤務表 '+(sm.shiftMonths.length?sm.shiftMonths.map(function(x){return monthLabel(x.mk)+'（勤務'+x.work+'日）';}).join('・'):'なし')+'</div>'
-    +'<div style="font-size:12px;color:#666">ほかの職員のデータは変更しません。</div>'
-    +(shortTotal?'<div style="margin-top:6px;color:#A32D2D">⚠ 削除すると担当がいなくなる勤務（警告として表示されます）：<ul style="margin:2px 0 0 18px">'+shortRows+'</ul></div>':'<div style="margin-top:6px;color:#1B6B45">削除しても担当がいなくなる必須勤務はありません。</div>');
-  if(st.done){panel.innerHTML=html+st.resultHtml+'</div>';return;}
-  var pre=st.preBackup;
-  html+=opStepsHtml('staffDel',pre,'この職員と、上記のデータを削除することを承認します','削除を実行','staffDeleteBackup()','staffDeleteExecute()','staffDeleteCancel()')+'</div>';
-  panel.innerHTML=html;
+  var panel=document.getElementById('staffOpPanel');
+  if(panel&&!staffDelState)panel.innerHTML='';
 }
 // バックアップ・保存確認・承認の共通部品
 function opStepsHtml(prefix,pre,agreeText,execLabel,backupFn,execFn,cancelFn){
@@ -4574,8 +4919,10 @@ function opResultHtml(r,okText,preFileName){
   if(r.status==='rolledBack') return '<div style="margin-top:12px;padding:10px 12px;background:#fff0f0;border-radius:8px;color:#A32D2D"><div style="font-weight:500">❌ 失敗したため、実行前の状態に戻しました</div><div>'+escHtml(r.message)+'</div><div style="color:#333">保存データが実行前と同じであることを確認しました。自動で再試行はしません。</div></div>';
   return '<div style="margin-top:12px;padding:10px 12px;background:#A32D2D;border-radius:8px;color:#fff"><div style="font-weight:700">⛔ 失敗し、実行前の状態にも戻せませんでした</div><div>'+escHtml(r.message)+'</div><div style="margin-top:4px">このままツールを操作しないでください。自動で再試行はしません。実行前のデータは <b>'+escHtml(preFileName)+'</b> に保存されています。</div></div>';
 }
-function staffDeleteBackup(){if(staffDelState) opBackup('staffDel','shift_pre_delete_backup_',staffDelState,renderStaffDeletePanel);}
-function staffDeleteCancel(){staffDelState=null;renderStaffDeletePanel();}
+function staffDeleteCancel(){
+  var bd=document.getElementById('staffDeleteConfirm');if(bd)bd.remove();
+  staffDelState=null;renderStaffDeletePanel();
+}
 function staffDeleteExecute(baseSnap){
   var st=staffDelState;
   if(!st||st.done||!isIdMode()) return;
@@ -4584,16 +4931,18 @@ function staffDeleteExecute(baseSnap){
     var D=parseIdData(cur.values);
     var target=D.staff.staff.filter(function(s){return s.id===st.id;})[0];
     if(!target) return {error:'対象の職員が見つかりません'};
-    var shortages=staffDeleteShortages(D,target);
     var before=copyJson(D);
     D.staff.staff=D.staff.staff.filter(function(s){return s.id!==st.id;});
-    [D.kibou,D.lock,D.unit].forEach(function(o){Object.keys(o.months).forEach(function(mk){delete o.months[mk][st.id];});});
-    Object.keys(D.shift.months).forEach(function(mk){delete D.shift.months[mk].rows[st.id];});
-    Object.keys(shortages).forEach(function(mk){D.gw[mk]=(D.gw[mk]||[]).concat(shortages[mk]);});
+    [D.kibou,D.lock].forEach(function(o){Object.keys(o.months).forEach(function(mk){delete o.months[mk][st.id];});});
+    Object.keys(D.shift.months).forEach(function(mk){
+      var month=D.shift.months[mk];
+      if(!month.rows||!month.rows.hasOwnProperty(st.id))return;
+      month.archivedStaff=month.archivedStaff||{};
+      month.archivedStaff[st.id]=copyJson(target);
+    });
     var w={};
     w[STORAGE_STAFF_V2]=JSON.stringify(D.staff);w[STORAGE_KIBOU_V2]=JSON.stringify(D.kibou);w[STORAGE_SHIFT_V2]=JSON.stringify(D.shift);
-    w[STORAGE_LOCK_V2]=JSON.stringify(D.lock);w[STORAGE_UNIT_V2]=JSON.stringify(D.unit);
-    if(Object.keys(shortages).length) w[STORAGE_GENWARN]=JSON.stringify(D.gw);
+    w[STORAGE_LOCK_V2]=JSON.stringify(D.lock);
     return {writes:w,before:before,targetId:st.id};
   },function(after,cur,plan){
     var bad=[],A;
@@ -4602,7 +4951,7 @@ function staffDeleteExecute(baseSnap){
     var others=B.staff.staff.filter(function(s){return s.id!==id;});
     if(!jsonEq(A.staff.staff,others)) bad.push('ほかの職員の職員情報');
     if(A.staff.staff.some(function(s){return s.id===id;})) bad.push('職員マスター');
-    [['kibou','希望休'],['lock','ロック'],['unit','勤務先']].forEach(function(p){
+    [['kibou','希望休'],['lock','ロック']].forEach(function(p){
       Object.keys(B[p[0]].months).forEach(function(mk){
         var am=A[p[0]].months[mk];
         if(!am){bad.push(p[1]+'の月');return;}
@@ -4614,8 +4963,10 @@ function staffDeleteExecute(baseSnap){
     Object.keys(B.shift.months).forEach(function(mk){
       var am=A.shift.months[mk],bm=B.shift.months[mk];
       if(!am||am.days!==bm.days){bad.push('勤務表の月');return;}
-      if(am.rows.hasOwnProperty(id)) bad.push('勤務表（対象職員）');
-      Object.keys(bm.rows).forEach(function(k){if(k!==id&&!jsonEq(am.rows[k],bm.rows[k])) bad.push('勤務表（ほかの職員）');});
+      Object.keys(bm.rows).forEach(function(k){if(!jsonEq(am.rows[k],bm.rows[k])) bad.push(k===id?'勤務表（対象職員）':'勤務表（ほかの職員）');});
+      var oldArchived=bm.archivedStaff||{},newArchived=am.archivedStaff||{};
+      Object.keys(oldArchived).forEach(function(k){if(!jsonEq(newArchived[k],oldArchived[k]))bad.push('過去職員情報');});
+      if(bm.rows.hasOwnProperty(id)&&(!newArchived[id]||newArchived[id].name!==st.label))bad.push('過去勤務表の氏名');
     });
     return bad;
   });
@@ -4653,107 +5004,86 @@ function staffDeleteExecute(baseSnap){
   }
 }
 
-/* ---------- 試作データ（月）のリセット ---------- */
-function monthResetCandidates(D){
-  var months={};
-  var add=function(mk){months[mk]=true;};
-  Object.keys(D.shift.months).forEach(add);Object.keys(D.lock.months).forEach(add);Object.keys(D.unit.months).forEach(add);Object.keys(D.gw).forEach(add);
-  var n=function(o){return Object.keys(o||{}).reduce(function(a,k){return a+Object.keys(o[k]||{}).length;},0);};
-  return Object.keys(months).sort(function(a,b){var x=a.split('-'),y=b.split('-');return (+x[0]-+y[0])||(+x[1]-+y[1]);}).map(function(mk){
-    var sm=D.shift.months[mk];
-    return {mk:mk,rows:sm?Object.keys(sm.rows).length:0,locks:n(D.lock.months[mk]),units:n(D.unit.months[mk]),warns:(D.gw[mk]||[]).length,kibou:n(D.kibou.months[mk])};
-  });
+/* ---------- 当月シフトのリセット（1世代の元に戻す付き） ---------- */
+// 全データJSONの対象になる shiftTool_ とは別のキーに退避する。
+var SHIFT_RESET_UNDO_KEY='shiftResetUndo_v1';
+function monthResetPart(map,mk){
+  return Object.prototype.hasOwnProperty.call(map||{},mk)
+    ?{exists:true,value:copyJson(map[mk])}:{exists:false};
+}
+function makeMonthResetUndo(mk){
+  var fixed=isIdMode(),shiftMap=generatedShift,lockMap=lockedCells,unitMap=chuuritsuUnit;
+  if(fixed){
+    var s=readIdJson(STORAGE_SHIFT_V2),l=readIdJson(STORAGE_LOCK_V2),u=readIdJson(STORAGE_UNIT_V2);
+    if(!s||!l||!u||!isPlainObject(s.months)||!isPlainObject(l.months)||!isPlainObject(u.months)) throw new Error('保存データを読み取れません');
+    shiftMap=s.months;lockMap=l.months;unitMap=u.months;
+  }
+  return {version:1,fixedId:fixed,monthKey:mk,savedAt:new Date().toISOString(),
+    shift:monthResetPart(shiftMap,mk),lock:monthResetPart(lockMap,mk),
+    unit:monthResetPart(unitMap,mk),warnings:monthResetPart(genWarnings,mk)};
 }
 function openMonthResetPanel(){
   var panel=document.getElementById('monthResetPanel');
   if(!panel) return;
-  if(!isIdMode()){
-    panel.innerHTML='<div class="form-card" style="font-size:13px">試作データのリセットは、職員固定IDへのデータ移行後に使えます（職員マスター画面から移行してください）。<div style="margin-top:8px"><button class="btn btn-sm" onclick="monthResetCancel()">閉じる</button></div></div>';
+  panel.innerHTML='<div class="form-card" style="display:inline-flex;align-items:center;gap:18px;padding:8px 10px;margin-bottom:8px;font-size:14px;border-color:#e0a0a0">'
+    +'<div style="white-space:nowrap">この月のシフトをリセットしますか？</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;white-space:nowrap">'
+    +'<button class="btn" onclick="monthResetCancel()">キャンセル</button>'
+    +'<button class="btn btn-danger" onclick="monthResetExecute()">リセット</button></div></div>';
+}
+function monthResetCancel(){
+  var panel=document.getElementById('monthResetPanel');
+  if(panel) panel.innerHTML='';
+}
+function monthResetExecute(){
+  var panel=document.getElementById('monthResetPanel'),mk=shiftYear+'-'+(shiftMonth+1),undo;
+  if(!generatedShift[mk]){monthResetCancel();return;}
+  try{
+    undo=makeMonthResetUndo(mk);
+    localStorage.setItem(SHIFT_RESET_UNDO_KEY,JSON.stringify(undo));
+  }catch(e){
+    if(panel) panel.innerHTML='<div class="form-card" style="color:#A32D2D">リセット前の状態を保存できないため、リセットしませんでした。</div>';
     return;
   }
-  var D;
-  try{D=parseIdData(readShiftToolStorage().values);}catch(e){alert('保存データを読み取れないためリセットできません');return;}
-  var cur=shiftYear+'-'+(shiftMonth+1);
-  var cands=monthResetCandidates(D);
-  monthResetState={cands:cands,months:cands.some(function(c){return c.mk===cur;})?[cur]:[],preBackup:null,done:false,resultHtml:''};
-  renderMonthResetPanel();
+  clearGeneratedShift();
+  if(panel) panel.innerHTML='<div class="form-card" style="font-size:14px;border-color:#cfe0bd;background:#f6faf2">'
+    +'<span style="color:#1B6B45">シフトをリセットしました</span>'
+    +'<button class="btn btn-sm" style="margin-left:12px" onclick="undoMonthReset()">元に戻す</button></div>';
 }
-function monthResetToggle(mk,on){
-  var st=monthResetState;if(!st||st.preBackup) return;
-  st.months=st.months.filter(function(x){return x!==mk;});
-  if(on) st.months.push(mk);
-  renderMonthResetPanel();
-}
-function renderMonthResetPanel(){
-  var panel=document.getElementById('monthResetPanel'),st=monthResetState;
-  if(!panel) return;
-  if(!st){panel.innerHTML='';return;}
-  var locked=!!st.preBackup||st.done;
-  var rows=st.cands.map(function(c){
-    var on=st.months.indexOf(c.mk)>=0;
-    return '<tr><td style="padding:3px 10px 3px 0"><label style="cursor:pointer"><input type="checkbox" '+(on?'checked ':'')+(locked?'disabled ':'')+'onchange="monthResetToggle(\''+c.mk+'\',this.checked)"> '+monthLabel(c.mk)+'</label></td>'
-      +'<td style="padding:3px 10px 3px 0">勤務表 '+(c.rows?c.rows+'人分':'なし')+'</td><td style="padding:3px 10px 3px 0">ロック '+c.locks+'件</td><td style="padding:3px 10px 3px 0">勤務先 '+c.units+'件</td><td style="padding:3px 10px 3px 0">生成警告 '+c.warns+'件</td>'
-      +'<td style="color:#1B6B45">希望休 '+c.kibou+'件は残ります</td></tr>';
-  }).join('');
-  var html='<div class="form-card" style="font-size:13px;line-height:1.7;border-color:#e0a0a0">'
-    +'<div style="font-size:15px;font-weight:500">試作データ（月）のリセット</div>'
-    +'<div style="font-size:12px;color:#666">選んだ月の「生成済み勤務表・ロック・実勤務先・生成時の警告」を削除します。職員マスター・希望休・有休・希望シフト・勤務コード設定は削除しません。</div>'
-    +(st.cands.length?'<table style="margin-top:8px;border-collapse:collapse">'+rows+'</table>':'<div style="margin-top:8px">リセットできる月はありません。</div>');
-  if(st.done){panel.innerHTML=html+st.resultHtml+'</div>';return;}
-  if(!st.cands.length){panel.innerHTML=html+'<div style="margin-top:8px"><button class="btn btn-sm" onclick="monthResetCancel()">閉じる</button></div></div>';return;}
-  html+='<div style="margin-top:6px">選択中：<b>'+(st.months.length?st.months.map(monthLabel).join('・'):'なし')+'</b>'+(st.preBackup?'（バックアップ後は選択を変更できません。変更する場合はキャンセルしてやり直してください）':'')+'</div>';
-  html+=st.months.length
-    ?opStepsHtml('monthReset',st.preBackup,'選んだ月の試作データを削除することを承認します','リセットを実行','monthResetBackup()','monthResetExecute()','monthResetCancel()')
-    :'<div style="margin-top:8px"><button class="btn btn-sm" onclick="monthResetCancel()">キャンセル</button></div>';
-  panel.innerHTML=html+'</div>';
-}
-function monthResetBackup(){if(monthResetState&&monthResetState.months.length) opBackup('monthReset','shift_pre_reset_backup_',monthResetState,renderMonthResetPanel);}
-function monthResetCancel(){monthResetState=null;renderMonthResetPanel();}
-function monthResetExecute(){
-  var st=monthResetState;
-  if(!st||st.done||!st.preBackup||!st.months.length||!opChecked('monthReset')||!isIdMode()) return;
-  var labels=st.months.map(monthLabel).join('・');
-  if(!confirm(labels+' の生成済み勤務表・ロック・勤務先・生成時の警告を削除します。\n（職員マスター・希望休は残ります）\n\n本当にリセットしますか？')) return;
-  var months=st.months.slice();
-  var r=runStorageTransaction(st.preBackup.snapshot,function(cur){
-    var D=parseIdData(cur.values),before=copyJson(D),touchGw=false;
-    months.forEach(function(mk){
-      delete D.shift.months[mk];delete D.lock.months[mk];delete D.unit.months[mk];
-      if(D.gw.hasOwnProperty(mk)){delete D.gw[mk];touchGw=true;}
-    });
-    var w={};
-    w[STORAGE_SHIFT_V2]=JSON.stringify(D.shift);w[STORAGE_LOCK_V2]=JSON.stringify(D.lock);w[STORAGE_UNIT_V2]=JSON.stringify(D.unit);
-    if(touchGw) w[STORAGE_GENWARN]=JSON.stringify(D.gw);
-    return {writes:w,before:before};
-  },function(after,cur,plan){
-    var bad=[],A;
-    try{A=parseIdData(after.values);}catch(e){return ['読み直し'];}
-    var B=plan.before;
-    [['shift','勤務表'],['lock','ロック'],['unit','勤務先']].forEach(function(p){
-      Object.keys(B[p[0]].months).forEach(function(mk){
-        if(months.indexOf(mk)>=0){if(A[p[0]].months.hasOwnProperty(mk)) bad.push(p[1]+'（対象月）');}
-        else if(!jsonEq(A[p[0]].months[mk],B[p[0]].months[mk])) bad.push(p[1]+'（ほかの月）');
-      });
-    });
-    Object.keys(B.gw).forEach(function(mk){
-      if(months.indexOf(mk)>=0){if(A.gw.hasOwnProperty(mk)) bad.push('生成警告（対象月）');}
-      else if(!jsonEq(A.gw[mk],B.gw[mk])) bad.push('生成警告（ほかの月）');
-    });
-    if(!jsonEq(A.staff,B.staff)) bad.push('職員マスター');
-    if(!jsonEq(A.kibou,B.kibou)) bad.push('希望休');
-    return bad;
-  });
-  if(r.status==='aborted'){st.preBackup=null;renderMonthResetPanel();var p=document.getElementById('monthResetPanel');if(p)p.innerHTML+='<div style="color:#A32D2D;font-weight:500">❌ '+escHtml(r.message)+'</div>';return;}
-  if(r.status==='success'){
-    reloadStateAfterRestore();
-    var curKey=shiftYear+'-'+(shiftMonth+1);
-    try{if(generatedShift[curKey]) renderShiftTable(generatedShift[curKey],shiftYear,shiftMonth);
-      else{document.getElementById('btnExportCSV').style.display='none';document.getElementById('btnExportXLSX').style.display='none';document.getElementById('btnClearShift').style.display='none';}}catch(e){}
+function restoredMonthStorageValue(storageKey,fixed,mk,part){
+  var raw=localStorage.getItem(storageKey),obj;
+  if(fixed){
+    obj=raw===null?{version:2,months:{}}:JSON.parse(raw);
+    if(!obj||!isPlainObject(obj.months)) throw new Error('保存データの形式が正しくありません');
+    if(part.exists)obj.months[mk]=copyJson(part.value);else delete obj.months[mk];
+  }else{
+    obj=raw===null?{}:JSON.parse(raw);
+    if(!isPlainObject(obj)) throw new Error('保存データの形式が正しくありません');
+    if(part.exists)obj[mk]=copyJson(part.value);else delete obj[mk];
   }
-  st.done=true;
-  st.resultHtml=opResultHtml(r,labels+' の試作データをリセットしました（職員マスター・希望休・ほかの月が変わっていないことを確認しました）',st.preBackup.fileName)
-    +(r.status==='success'?'<div style="margin-top:8px"><button class="btn btn-sm" onclick="monthResetCancel()">閉じる</button></div>':'');
-  renderMonthResetPanel();
+  return JSON.stringify(obj);
+}
+function undoMonthReset(){
+  var panel=document.getElementById('monthResetPanel'),undo,writes=[],before=[];
+  try{
+    undo=JSON.parse(localStorage.getItem(SHIFT_RESET_UNDO_KEY)||'null');
+    if(!undo||undo.version!==1||typeof undo.monthKey!=='string'||undo.fixedId!==isIdMode()) throw new Error('元に戻すデータがありません');
+    var fixed=undo.fixedId,mk=undo.monthKey;
+    writes.push({key:fixed?STORAGE_SHIFT_V2:STORAGE_SHIFT,value:restoredMonthStorageValue(fixed?STORAGE_SHIFT_V2:STORAGE_SHIFT,fixed,mk,undo.shift)});
+    writes.push({key:fixed?STORAGE_LOCK_V2:STORAGE_LOCK,value:restoredMonthStorageValue(fixed?STORAGE_LOCK_V2:STORAGE_LOCK,fixed,mk,undo.lock)});
+    writes.push({key:fixed?STORAGE_UNIT_V2:STORAGE_UNIT,value:restoredMonthStorageValue(fixed?STORAGE_UNIT_V2:STORAGE_UNIT,fixed,mk,undo.unit)});
+    writes.push({key:STORAGE_GENWARN,value:restoredMonthStorageValue(STORAGE_GENWARN,false,mk,undo.warnings)});
+    writes.forEach(function(w){before.push({key:w.key,value:localStorage.getItem(w.key)});localStorage.setItem(w.key,w.value);});
+  }catch(e){
+    for(var i=before.length-1;i>=0;i--){try{if(before[i].value===null)localStorage.removeItem(before[i].key);else localStorage.setItem(before[i].key,before[i].value);}catch(ignore){}}
+    if(panel) panel.innerHTML='<div class="form-card" style="color:#A32D2D">リセット前の状態に戻せませんでした。</div>';
+    return;
+  }
+  localStorage.removeItem(SHIFT_RESET_UNDO_KEY);
+  reloadStateAfterRestore();
+  var cur=shiftYear+'-'+(shiftMonth+1);
+  if(generatedShift[cur]) renderShiftTable(generatedShift[cur],shiftYear,shiftMonth);
+  if(panel) panel.innerHTML='<div class="form-card" style="font-size:14px;color:#1B6B45;border-color:#cfe0bd;background:#f6faf2">リセット前の状態に戻しました</div>';
 }
 
 /* ===== 11連（年間11日・正職員の祝日代替休暇） =====
@@ -4911,11 +5241,23 @@ function holidayListHtml(y,m1){
   }).join('　')+'</div>';
 }
 
-/* ===== 名簿の一括登録（配布版では無効） =====
-   NEW_ROSTER に職員を並べると一括登録の案内が出る仕組み。
-   配布版では実名を含めないため空にしてあり、この機能は表示されない。 */
+/* ===== 新しい名簿の一括登録（1回だけ使う機能） =====
+   勤務表の画像から読み取った26名で職員マスターを入れ替える。
+   実行前に全データを自動でバックアップし、確認してから入れ替える。
+   勤務形態・雇用形態・NGシフトは設定せず（登録後に個別編集）、試作の勤務表・希望データは消す */
 var STORAGE_ROSTER_DONE='shiftTool_rosterImport2026';
-var NEW_ROSTER=[];  // 配布版では実名の名簿データを削除しています（空のため一括登録の案内は表示されません）
+var NEW_ROSTER=[
+  {name:'久保　瑞季',unit:'さくら'},{name:'堀江　麻子',unit:'さくら'},{name:'岡野　裕明',unit:'さくら'},
+  {name:'岸本　哲哉',unit:'さくら'},{name:'加茂　咲江',unit:'さくら'},{name:'惣萬　千代美',unit:'さくら'},
+  {name:'石井　英明',unit:'さくら'},{name:'由良　恭美',unit:'さくら'},{name:'谷口　美和子',unit:'さくら'},
+  {name:'西村　多喜子',unit:'さくら'},{name:'早瀬　眞澄',unit:'さくら'},{name:'尾関　鈴代',unit:'さくら'},
+  {name:'藤田　麻衣',unit:'けやき'},{name:'谷口　真紀',unit:'けやき'},{name:'山末　哲也',unit:'けやき'},
+  {name:'浦口　玲子',unit:'けやき'},{name:'太田　和美',unit:'けやき'},{name:'西村　優香',unit:'けやき'},
+  {name:'松尾　由紀子',unit:'けやき'},{name:'矢野　文香',unit:'けやき'},{name:'松本　真奈美',unit:'けやき'},
+  {name:'上田　大智',unit:'けやき'},
+  {name:'五宝　健介',unit:'中立兼務'},{name:'藤原　元明',unit:'中立兼務'},{name:'吉岡　孝人',unit:'中立兼務'},
+  {name:'山本　美保',unit:'中立兼務'}
+];
 function rosterImportDone(){
   try{return localStorage.getItem(STORAGE_ROSTER_DONE)!==null;}catch(e){return false;}
 }
@@ -5233,6 +5575,8 @@ function exportShiftXlsx(){
 
 loadShiftCodes();
 renderRosterImportArea(); // 起動時の描画は名簿の定義より前に走るため、ここで改めて表示する
+showTab('shift');
+initializeShiftLogin();
 </script>
 </body>
 </html>
