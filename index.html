@@ -5476,6 +5476,12 @@ function xlsxShortName(name){
   var t=String(name||'').split(/[\s　]+/).filter(function(x){return x;});
   return t.length?t[0]:String(name||'');
 }
+// 元テンプレートに残っている不要な直線矢印だけを除く（ほかの図形・画像は維持する）。
+function xlsxDrawingWithoutTemplateArrows(xml){
+  return String(xml||'').replace(/<xdr:twoCellAnchor\b[\s\S]*?<\/xdr:twoCellAnchor>/g,function(anchor){
+    return /<xdr:cNvPr\b[^>]*\bname="直線矢印コネクタ [^"]+"/.test(anchor)?'':anchor;
+  });
+}
 
 /* --- ZIP書き出し（無圧縮＝STORED。外部ライブラリを使わずオフラインで動かすため） --- */
 var XLSX_CRC_TABLE=null;
@@ -5680,7 +5686,7 @@ function exportShiftXlsx(){
              {name:'xl/worksheets/sheet1.xml',data:sheet},
              {name:'xl/worksheets/_rels/sheet1.xml.rels',data:T.parts['xl/worksheets/_rels/sheet1.xml.rels']},
              {name:'xl/worksheets/sheet2.xml',data:T.parts['xl/worksheets/sheet2.xml']},
-             {name:'xl/drawings/drawing1.xml',data:T.parts['xl/drawings/drawing1.xml']},
+             {name:'xl/drawings/drawing1.xml',data:xlsxDrawingWithoutTemplateArrows(T.parts['xl/drawings/drawing1.xml'])},
              {name:'xl/sharedStrings.xml',data:T.parts['xl/sharedStrings.xml']}];
   var bytes=xlsxZip(files);
   var blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
