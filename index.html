@@ -28,6 +28,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:#f5f5f0;min-height:100vh;c
 .shared-load-area{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .shared-load-status{color:#fff;font-size:12px;max-width:280px;text-align:right}
 .shared-load-status.error{color:#ffd4d4}
+.auto-save-control{display:flex;align-items:center;gap:6px;color:#555;font-size:13px;white-space:nowrap}
+.auto-save-control select{min-height:36px;padding:5px 8px;border:1px solid rgba(255,255,255,.55);border-radius:8px;background:#fff;color:#1a1a1a;font-family:'Noto Sans JP',sans-serif;font-size:13px}
 @media(max-width:600px){
   .app-header{align-items:flex-start;gap:12px;flex-wrap:wrap}
   .shared-load-area{width:100%;justify-content:flex-start}
@@ -533,6 +535,9 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
     <button class="btn" onclick="exportShiftCSV()" id="btnExportCSV" style="display:none">CSVで書き出し</button>
     <button class="btn" onclick="exportShiftXlsx()" id="btnExportXLSX" style="display:none">Excel出力</button>
     <button class="btn btn-danger btn-sm" onclick="openMonthResetPanel()" id="btnClearShift" style="display:none">リセット</button>
+    <label class="auto-save-control">自動保存
+      <select id="shiftAutoSave" onchange="changeShiftAutoSaveSetting()"><option value="0">OFF</option><option value="1">ON</option></select>
+    </label>
   </div>
   <div id="monthResetPanel"></div>
   <div id="shiftMsg" style="margin-bottom:12px;font-size:13px;color:#666"></div>
@@ -755,9 +760,44 @@ async function restoreLatestSharedData(){
     throw new Error('Shared data unavailable');
   return handleRestoreFileText(result.data.payload_text,'Supabase共有データ.json',{skipConfirm:true});
 }
-async function saveSharedData(){
+var SHIFT_AUTO_SAVE_KEY='hagoromoShift_autoSave'; // 全データJSON・Supabase共有には含めない端末専用設定
+var shiftAutoSaveTimer=null;
+var shiftAutoSavePending=false;
+var sharedSaveInProgress=false;
+function shiftAutoSaveEnabled(){
+  var el=document.getElementById('shiftAutoSave');
+  return !!(el&&el.value==='1');
+}
+function initializeShiftAutoSaveSetting(){
+  var el=document.getElementById('shiftAutoSave'),enabled=false;
+  try{enabled=localStorage.getItem(SHIFT_AUTO_SAVE_KEY)==='1';}catch(e){}
+  if(el)el.value=enabled?'1':'0';
+}
+function changeShiftAutoSaveSetting(){
+  var enabled=shiftAutoSaveEnabled();
+  try{localStorage.setItem(SHIFT_AUTO_SAVE_KEY,enabled?'1':'0');}catch(e){}
+  if(!enabled){
+    if(shiftAutoSaveTimer)clearTimeout(shiftAutoSaveTimer);
+    shiftAutoSaveTimer=null;shiftAutoSavePending=false;
+  }
+}
+function scheduleShiftAutoSave(){
+  if(!shiftAutoSaveEnabled())return;
+  if(shiftAutoSaveTimer)clearTimeout(shiftAutoSaveTimer);
+  shiftAutoSaveTimer=setTimeout(function(){
+    shiftAutoSaveTimer=null;
+    if(shiftAutoSaveEnabled())saveSharedData({automatic:true});
+  },1000);
+}
+async function saveSharedData(opts){
+  opts=opts||{};
+  var automatic=opts.automatic===true;
+  if(!automatic&&shiftAutoSaveTimer){clearTimeout(shiftAutoSaveTimer);shiftAutoSaveTimer=null;}
+  if(sharedSaveInProgress){if(automatic)shiftAutoSavePending=true;return false;}
   var button=document.getElementById('sharedSaveButton');
   var status=document.getElementById('sharedLoadStatus');
+  var succeeded=false;
+  sharedSaveInProgress=true;
   button.disabled=true;
   button.textContent='保存中…';
   status.classList.remove('error');
@@ -775,15 +815,23 @@ async function saveSharedData(){
       .eq('facility_id',stateResult.data.facility_id)
       .select('facility_id');
     if(saveResult.error||!Array.isArray(saveResult.data)||saveResult.data.length!==1)throw new Error('Shared save failed');
-    status.textContent='共有データを保存しました';
+    succeeded=true;
+    status.textContent=automatic?'自動保存しました':'共有データを保存しました';
   }catch(e){
     status.classList.add('error');
-    status.textContent='共有データを保存できませんでした';
+    status.textContent=automatic?'自動保存に失敗しました':'共有データを保存できませんでした';
   }finally{
     button.disabled=false;
     button.textContent='共有へ保存';
+    sharedSaveInProgress=false;
+    if(shiftAutoSavePending){
+      shiftAutoSavePending=false;
+      if(shiftAutoSaveEnabled())scheduleShiftAutoSave();
+    }
   }
+  return succeeded;
 }
+initializeShiftAutoSaveSetting();
 
 var SHIFTS=['早1','早2','日','日3','遅','夜勤'];
 var STORAGE_STAFF='shiftTool_staffMaster';
@@ -2123,6 +2171,7 @@ function generateShift(options){
     genWarnings=baseWarnings;genWarnings[outerKey]=best.warnings;
     lastGenerationQuality={key:outerKey,candidates:candidateCount,quality:best.quality,rebalance:best.rebalance};
     saveGeneratedShift();saveChuuritsuUnit();saveGenWarnings();renderShiftTable(best.result,shiftYear,shiftMonth);
+    scheduleShiftAutoSave();
     return;
   }
   if(!staff.length){
@@ -3228,6 +3277,10 @@ function applyShiftEdit(si,dIdx,y,m){
   var key=y+'-'+(m+1);
   var nightOnly=isNightOnlyStaff(staff[si]);
   var before=generatedShift[key][si][dIdx];
+  var beforeUnit=savedWorkUnitCode(key,si,dIdx);
+  var nextRef=nextDayCell(key,si,dIdx);
+  var nextBefore=nextRef?generatedShift[nextRef.key][si][nextRef.d]:null;
+  var nextUnitBefore=nextRef?savedWorkUnitCode(nextRef.key,si,nextRef.d):null;
   var ngHit=staff[si]?ngShiftHit(staff[si],sel.value):'';
   if(ngHit&&!confirm(staff[si].name+'さんは「'+ngHit+'」がNGシフトです。「'+sel.value+'」を保存しますか？')) return;
   var unitSel=document.querySelector('input[name=seditUnit]:checked');
@@ -3248,6 +3301,9 @@ function applyShiftEdit(si,dIdx,y,m){
   }
   saveGeneratedShift();
   saveChuuritsuUnit();
+  var changed=before!==generatedShift[key][si][dIdx]||beforeUnit!==savedWorkUnitCode(key,si,dIdx)
+    ||(nextRef&&(nextBefore!==generatedShift[nextRef.key][si][nextRef.d]||nextUnitBefore!==savedWorkUnitCode(nextRef.key,si,nextRef.d)));
+  if(changed)scheduleShiftAutoSave();
   var bd=document.getElementById('shiftEditBackdrop');
   if(bd) bd.remove();
   document.body.style.overflow='';
@@ -5107,6 +5163,7 @@ function monthResetExecute(){
     return;
   }
   clearGeneratedShift();
+  scheduleShiftAutoSave();
   if(panel) panel.innerHTML='<div class="form-card" style="font-size:14px;border-color:#cfe0bd;background:#f6faf2">'
     +'<span style="color:#1B6B45">シフトをリセットしました</span>'
     +'<button class="btn btn-sm" style="margin-left:12px" onclick="undoMonthReset()">元に戻す</button></div>';
@@ -5144,6 +5201,7 @@ function undoMonthReset(){
   reloadStateAfterRestore();
   var cur=shiftYear+'-'+(shiftMonth+1);
   if(generatedShift[cur]) renderShiftTable(generatedShift[cur],shiftYear,shiftMonth);
+  scheduleShiftAutoSave();
   if(panel) panel.innerHTML='<div class="form-card" style="font-size:14px;color:#1B6B45;border-color:#cfe0bd;background:#f6faf2">リセット前の状態に戻しました</div>';
 }
 
