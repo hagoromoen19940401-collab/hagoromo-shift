@@ -445,7 +445,7 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
             早1・早2・日3・遅・夜勤は必要人数が決まっているため、基本勤務に選んでも空いた日を自動では埋められません。</div>
         </div>
         <div class="field"><label class="label">月の希望休（最大日数）</label>
-          <select id="fmaxrest"><option value="4">4日</option><option value="5">5日</option><option value="6">6日</option><option value="8">8日</option><option value="10">10日</option></select>
+          <select id="fmaxrest"><option value="1">1日</option><option value="2">2日</option><option value="3" selected>3日</option><option value="4">4日</option><option value="5">5日</option><option value="6">6日</option><option value="8">8日</option><option value="10">10日</option></select>
         </div>
         <div class="field"><label class="label">基本休日数<span class="required">*</span></label>
           <select id="fbaserest"><option value="8">8日</option><option value="9" selected>9日</option><option value="10">10日</option><option value="11">11日</option><option value="12">12日</option><option value="13">13日</option><option value="14">14日</option></select>
@@ -808,6 +808,11 @@ function isNightOnlyIndex(si){return isNightOnlyStaff(staff[si]);}
 function maxConsecOf(s){
   var n=Number(s&&s.maxConsec);
   return n===3||n===4||n===5?n:5;
+}
+function maxRestOf(s){
+  if(!s||s.maxrest==null||s.maxrest==='') return 3;
+  var n=Number(s.maxrest);
+  return isFinite(n)&&n>=0?n:3;
 }
 // 未割当セルの読み方：夜勤専従は空白、それ以外は従来どおり「休」として扱う
 function cellAt(result,si,d0){
@@ -1189,7 +1194,7 @@ function openStaffForm(){
   document.getElementById('funit').value='';
   document.getElementById('ftype').value='';
   document.getElementById('femp').value='常勤';
-  document.getElementById('fmaxrest').value='4';
+  document.getElementById('fmaxrest').value='3';
   document.getElementById('fbaserest').value='9';
   document.getElementById('fmaxconsec').value='5';
   document.getElementById('restrictField').style.display='none';
@@ -1253,7 +1258,7 @@ function editStaff(i){
   document.getElementById('funit').value=s.unit;
   document.getElementById('ftype').value=s.type;
   document.getElementById('femp').value=s.emp;
-  document.getElementById('fmaxrest').value=s.maxrest;
+  document.getElementById('fmaxrest').value=String(maxRestOf(s));
   document.getElementById('fbaserest').value=s.baserest||8;
   document.getElementById('fmaxconsec').value=String(maxConsecOf(s));
   document.getElementById('restrictField').style.display=s.type==='制限あり'?'block':'none';
@@ -1594,7 +1599,7 @@ function renderSummary(){
     else if(v.type==='shift')sh++;
   });
   var s=staff[selectedStaffIdx];
-  var max=s?s.maxrest:0;
+  var max=maxRestOf(s);
   var total=off+yuk;
   var ov=total>max?' sum-over':'';
   bar.innerHTML='<div class="sum-item"><span class="'+ov+'">'+total+'/'+max+'</span>休み合計/上限</div>'
@@ -5320,7 +5325,7 @@ function rosterImportDone(){
 // 勤務形態・雇用形態などは推測せず、あとから編集できる初期値だけを入れる
 function newRosterStaff(){
   return NEW_ROSTER.map(function(r){
-    return {name:r.name,unit:r.unit,type:'全勤務',emp:'',maxrest:4,baserest:9,ngShifts:[],ngDow:[]};
+    return {name:r.name,unit:r.unit,type:'全勤務',emp:'',maxrest:3,baserest:9,ngShifts:[],ngDow:[]};
   });
 }
 function renderRosterImportArea(){
