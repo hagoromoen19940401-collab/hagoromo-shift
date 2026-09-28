@@ -590,6 +590,10 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
         <div class="field"><label class="label">状態</label>
           <select id="cf_active"><option value="1">使用中</option><option value="0">使用停止</option></select>
         </div>
+        <div class="field" id="cf_autoGenerateField"><label class="label">自動生成で使用</label>
+          <select id="cf_autoGenerate"><option value="0">OFF（手動のみ）</option><option value="1">ON</option></select>
+          <div class="code-hint">職員マスターで許可された職員だけが対象です</div>
+        </div>
       </div>
       <div class="code-err" id="cf_error"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
@@ -1929,18 +1933,28 @@ function customShiftCodesOf(s){
     var info=getCodeInfo(code);return !!(info&&info.active);
   });
 }
+// 既存データに設定がない追加コードは、従来どおり自動生成で使用する。
+function additionalCodeAutoEnabled(code){
+  var info=getCodeInfo(code);
+  return !!(info&&isAdditionalShiftCode(code)&&info.autoGenerate!==false);
+}
 // 職員マスターで選んだ「基本勤務」。勤務可能なシフトから外れた・使用停止・削除済みなら未設定として扱う
 function baseShiftOf(s){
   if(!s||!s.baseShift||isNightOnlyStaff(s)) return '';
   if(isAdditionalShiftCode(s.baseShift)) return customShiftCodesOf(s).indexOf(s.baseShift)>=0?s.baseShift:'';
   return allowedShiftCodesOf(s).indexOf(s.baseShift)>=0?s.baseShift:'';
 }
+// 手動専用の追加コードは、自動生成時の基本勤務・候補者優先度にも影響させない。
+function autoBaseShiftOf(s){
+  var bs=baseShiftOf(s);
+  return isAdditionalShiftCode(bs)&&!additionalCodeAutoEnabled(bs)?'':bs;
+}
 // 必要人数が決まっている勤務（ユニット別1名・早2は全体1名）。自動生成はこの枠どおりに配置する
 var REQUIRED_COUNT_SHIFTS=['早1','早2','日3','遅','夜勤'];
 function isRequiredCountShift(code){return REQUIRED_COUNT_SHIFTS.indexOf(countAsOf(code))>=0;}
 // 空き日を埋めるのに使える基本勤務。必要人数のある勤務は枠を超えて増やさないため対象外にする
 function baseFillShiftOf(s){
-  var bs=baseShiftOf(s);
+  var bs=autoBaseShiftOf(s);
   return bs&&!isRequiredCountShift(bs)?bs:'';
 }
 // 職員マスターで使用可能にした追加コード。
@@ -1948,7 +1962,7 @@ function baseFillShiftOf(s){
 // 既存10コードは従来の必要人数ルールで配置するため、ここには含めない。
 function autoFillCodesOf(s){
   if(!s||isNightOnlyStaff(s)) return [];
-  var list=customShiftCodesOf(s);
+  var list=customShiftCodesOf(s).filter(additionalCodeAutoEnabled);
   // 従来の「勤務制限あり」は、基本勤務を優先する挙動も維持する。
   var bs=s.type==='制限あり'?baseFillShiftOf(s):'';
   if(bs){list=list.filter(function(c){return c!==bs;});list.unshift(bs);}
@@ -2224,7 +2238,7 @@ function generateShift(options){
   // 勤務制限ありの職員が勤務可能にした追加コード（該当しない職員は空配列）
   var autoFillCodes=staff.map(function(s){return autoFillCodesOf(s);});
   // 職員マスターで選んだ基本勤務（未設定・選べないコードは空文字）
-  var baseShifts=staff.map(function(s){return baseShiftOf(s);});
+  var baseShifts=staff.map(function(s){return autoBaseShiftOf(s);});
   // そのうち、空き日を埋めるのに使えるもの（必要人数のある勤務は枠どおりに配置するため除く）
   var baseFills=staff.map(function(s){return baseFillShiftOf(s);});
 
@@ -3522,8 +3536,11 @@ function validateShiftCodes(list,normalize){
     if(normalize&&isBuiltinCode(code)) color=SHIFT_COLORS[code]||'sc-kyu';
     if(!color) errors.push(no+'：色の指定が正しくありません');
     if(isBuiltinCode(code)&&color!==(SHIFT_COLORS[code]||'sc-kyu')) errors.push(no+'：既存コードの色は変更できません');
-    out.push({code:code,label:label,color:color,start:start,end:end,breakMin:breakMin===''?'':parseInt(breakMin,10),
-      restValue:rv,countAs:it.countAs==null?'':String(it.countAs),active:active});
+    var normalized={code:code,label:label,color:color,start:start,end:end,breakMin:breakMin===''?'':parseInt(breakMin,10),
+      restValue:rv,countAs:it.countAs==null?'':String(it.countAs),active:active};
+    // 新項目がない既存の追加コードは true とし、従来の自動生成動作を維持する。
+    if(!isBuiltinCode(code)&&!isLeaveCode(code)) normalized.autoGenerate=typeof it.autoGenerate==='boolean'?it.autoGenerate:true;
+    out.push(normalized);
   });
   out.forEach(function(c){
     if(c.countAs!==''&&!seen[c.countAs]) errors.push(c.code+'：人数集計の対象勤務「'+c.countAs+'」が一覧にありません');
@@ -3579,7 +3596,7 @@ function renderCodeList(){
   loadShiftCodes();
   var active=shiftCodes.filter(function(c){return c.active;}).length;
   document.getElementById('codeCount').textContent='登録 '+shiftCodes.length+'件（使用中 '+active+'件・使用停止 '+(shiftCodes.length-active)+'件）';
-  var html='<thead><tr><th>勤務コード</th><th>表示</th><th>開始</th><th>終了</th><th>休憩</th><th>実働時間</th><th>休日換算</th><th>人数集計</th><th>状態</th><th></th></tr></thead><tbody>';
+  var html='<thead><tr><th>勤務コード</th><th>表示</th><th>開始</th><th>終了</th><th>休憩</th><th>実働時間</th><th>休日換算</th><th>人数集計</th><th>自動生成で使用</th><th>状態</th><th></th></tr></thead><tbody>';
   shiftCodes.forEach(function(c,i){
     var wt=calcWorkTime(c.start,c.end,c.breakMin);
     html+='<tr'+(c.active?'':' class="code-stopped"')+'>'
@@ -3591,6 +3608,7 @@ function renderCodeList(){
       +'<td'+(wt.status==='error'?' style="color:#A32D2D"':wt.status==='unset'?' style="color:#bbb"':'')+'>'+formatWorkTime(wt)+'</td>'
       +'<td>'+c.restValue+'日</td>'
       +'<td>'+(c.countAs?escHtml(c.countAs):'<span style="color:#bbb">集計しない</span>')+'</td>'
+      +'<td>'+(isAdditionalShiftCode(c.code)?(c.autoGenerate!==false?'ON':'OFF（手動のみ）'):'<span style="color:#bbb">対象外</span>')+'</td>'
       +'<td>'+(c.active?'使用中':'使用停止')+'</td>'
       +'<td><button class="btn btn-sm" onclick="openCodeForm('+i+')">編集</button>'
       +(isProtectedCode(c.code)?'':' <button class="btn btn-sm btn-danger" onclick="deleteShiftCode('+i+')">削除</button>')+'</td>'
@@ -3603,7 +3621,7 @@ function openCodeForm(idx){
   loadAll();
   loadShiftCodes();
   codeEditIndex=idx;
-  var c=idx>=0?shiftCodes[idx]:{code:'',label:'',color:'sc-nichi',start:'',end:'',breakMin:'',restValue:0,countAs:'',active:true};
+  var c=idx>=0?shiftCodes[idx]:{code:'',label:'',color:'sc-nichi',start:'',end:'',breakMin:'',restValue:0,countAs:'',active:true,autoGenerate:false};
   var builtin=idx>=0&&isProtectedCode(c.code),system=idx>=0&&isSystemCode(c.code);
   // 11連などの休暇コードは、コード名の変更・削除だけ禁止し、色と休日換算は変更できる
   var fixedValues=idx>=0&&isBuiltinCode(c.code);
@@ -3654,6 +3672,11 @@ function openCodeForm(idx){
   var activeEl=document.getElementById('cf_active');
   activeEl.value=c.active?'1':'0';
   activeEl.disabled=system;
+  var autoField=document.getElementById('cf_autoGenerateField');
+  var autoEl=document.getElementById('cf_autoGenerate');
+  var additional=idx<0||(!isBuiltinCode(c.code)&&!isLeaveCode(c.code));
+  autoField.style.display=additional?'':'none';
+  autoEl.value=c.autoGenerate===false?'0':'1';
   document.getElementById('cf_error').textContent='';
   updateCodeWorkPreview();
   document.getElementById('codeFormArea').style.display='block';
@@ -3689,6 +3712,7 @@ function saveCodeForm(){
     countAs:document.getElementById('cf_countAs').value,
     active:document.getElementById('cf_active').value==='1'
   };
+  if(!old||(!isBuiltinCode(old.code)&&!isLeaveCode(old.code))) item.autoGenerate=document.getElementById('cf_autoGenerate').value==='1';
   if(old&&isBuiltinCode(old.code)) item.color=old.color;
   if(old&&isBuiltinCode(old.code)) item.restValue=old.restValue;
   if(old&&isSystemCode(old.code)) item.active=true;
