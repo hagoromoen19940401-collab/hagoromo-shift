@@ -179,8 +179,9 @@ table.stbl th.sun{color:#A32D2D}
 table.stbl th.sat{color:#185FA5}
 table.stbl th.unit-head{background:#1B6B45;color:#fff;font-size:12px;text-align:left;padding:6px 10px}
 table.stbl td{border:1px solid #e8e8e0;padding:3px 2px;text-align:center;font-size:12px;min-width:36px}
-table.stbl td.name-cell{text-align:left;padding:4px 8px;font-size:12px;white-space:nowrap;background:#fafaf8;font-weight:500;min-width:80px}
-table.stbl td.name-cell .emp{font-size:10px;color:#999;margin-left:3px}
+table.stbl td.name-cell{text-align:left;padding:4px 8px;font-size:12px;background:#fafaf8;font-weight:500;min-width:80px;overflow:hidden;box-sizing:border-box}
+table.stbl td.name-cell .staff-name,table.stbl td.name-cell .emp{display:block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+table.stbl td.name-cell .emp{font-size:10px;line-height:1.25;color:#999;margin-top:2px;font-weight:400}
 .sc{display:inline-block;padding:2px 4px;border-radius:3px;font-size:11px;font-weight:500;min-width:28px;white-space:nowrap}
 .sc-hayai1{background:#FFF3CD;color:#856404}
 .sc-hayai2{background:#FFE5B4;color:#7B4A00}
@@ -239,8 +240,9 @@ input[type=text],select,.shift-sel-inline{
 .shift-table-wrap,.calendar-wrap{
   -webkit-overflow-scrolling:touch;
   overscroll-behavior-x:contain;
-  touch-action:pan-x;
 }
+.shift-table-wrap{touch-action:pan-x pan-y}
+.calendar-wrap{touch-action:pan-x}
 /* シフト表：氏名列を水平スクロール中も左端に固定 */
 table.stbl td.name-cell{
   position:sticky;left:0;z-index:2;
@@ -2664,7 +2666,7 @@ function renderShiftTable(result,y,m){
     tbody+='<tr><td colspan="'+(days+8)+'" class="unit-head">'+unit+'</td></tr>';
     members.forEach(function(x){
       var si=x.i;var s=x.s;
-      var row='<tr><td class="name-cell">'+s.name+'<span class="emp">'+s.emp+'</span></td>';
+      var row='<tr><td class="name-cell"><span class="staff-name">'+s.name+'</span><span class="emp">'+s.emp+'</span></td>';
       var yakCount=0,workCount=0;
       for(var d=1;d<=days;d++){
         var sh=cellAt(result,si,d-1);
@@ -2968,6 +2970,7 @@ function renderShiftTable(result,y,m){
   document.getElementById('btnClearShift').style.display='inline-block';
   applyShiftAlign();      // 上下の表で日付列の幅をそろえる
   bindShiftScrollSync();  // 上下の表の横スクロールを連動させる
+  bindShiftTapGuard();    // 指でスクロールした直後のセル編集を抑止する
   applyShiftZoom(); // 再表示しても倍率を保つ
 }
 
@@ -3050,6 +3053,29 @@ function bindShiftScrollSync(){
   };
   // 再描画のたびに中身ごと作り直されるため、登録が重なることはない
   for(var i=0;i<wraps.length;i++) wraps[i].addEventListener('scroll',onScroll);
+}
+// タッチ移動をスクロールとして扱い、移動後に合成される click で手動修正が開くのを防ぐ。
+// preventDefault は使わず、Safari本来の縦・横スクロールはそのまま利用する。
+function bindShiftTapGuard(){
+  var wraps=shiftAlignWraps();
+  for(var i=0;i<wraps.length;i++)(function(wrap){
+    var startX=0,startY=0,startLeft=0,moved=false,suppressUntil=0;
+    wrap.addEventListener('touchstart',function(e){
+      if(e.touches.length!==1){moved=true;return;}
+      startX=e.touches[0].clientX;startY=e.touches[0].clientY;
+      startLeft=wrap.scrollLeft;moved=false;
+    },{passive:true});
+    wrap.addEventListener('touchmove',function(e){
+      if(e.touches.length!==1){moved=true;return;}
+      if(Math.abs(e.touches[0].clientX-startX)>8||Math.abs(e.touches[0].clientY-startY)>8||Math.abs(wrap.scrollLeft-startLeft)>2)moved=true;
+    },{passive:true});
+    wrap.addEventListener('touchend',function(){if(moved)suppressUntil=Date.now()+500;},{passive:true});
+    wrap.addEventListener('touchcancel',function(){moved=true;suppressUntil=Date.now()+500;},{passive:true});
+    wrap.addEventListener('click',function(e){
+      var td=e.target&&e.target.closest?e.target.closest('td'):null;
+      if(td&&Date.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}
+    },true);
+  })(wraps[i]);
 }
 function applyShiftZoom(){
   var tables=shiftZoomTables();
