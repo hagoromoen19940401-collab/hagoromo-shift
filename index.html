@@ -68,8 +68,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:#f5f5f0;min-height:100vh;c
 .field{display:flex;flex-direction:column;gap:4px}
 .label{font-size:12px;color:#666}
 .required{color:#A32D2D;margin-left:2px}
-input[type=text],select{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;font-size:13px;font-family:'Noto Sans JP',sans-serif}
-input[type=text]:focus,select:focus{outline:none;border-color:#1B6B45;box-shadow:0 0 0 2px rgba(27,107,69,0.15)}
+input[type=text],#cf_requiredCount,select{width:100%;padding:7px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;font-size:13px;font-family:'Noto Sans JP',sans-serif}
+input[type=text]:focus,#cf_requiredCount:focus,select:focus{outline:none;border-color:#1B6B45;box-shadow:0 0 0 2px rgba(27,107,69,0.15)}
 .restriction-box{background:#f8f8f4;border-radius:8px;padding:12px;margin-top:4px}
 .restriction-label{font-size:12px;color:#666;margin-bottom:8px}
 .chip-row{display:flex;flex-wrap:wrap;gap:6px}
@@ -444,7 +444,7 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
           <select id="fbaseshift"><option value="">未設定（従来どおり）</option></select>
           <div class="code-hint">自動生成でふだん入れる勤務です。ほかのコードは、必要人数が足りない日の応援としてだけ使います（未設定なら従来どおりの動作）。<br>
             例：勤務可能＝「日」「日3」で基本勤務＝「日」→ ふだんは「日」、日3が他の職員で埋まらない日だけ「日3」。<br>
-            早1・早2・日3・遅・夜勤は必要人数が決まっているため、基本勤務に選んでも空いた日を自動では埋められません。</div>
+            必要人数を設定した勤務は、基本勤務に選んでも空いた日を自動では埋められません。</div>
         </div>
         <div class="field"><label class="label">月の希望休（最大日数）</label>
           <select id="fmaxrest"><option value="1">1日</option><option value="2">2日</option><option value="3" selected>3日</option><option value="4">4日</option><option value="5">5日</option><option value="6">6日</option><option value="8">8日</option><option value="10">10日</option></select>
@@ -598,6 +598,13 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
         <div class="field" id="cf_autoGenerateField"><label class="label">自動生成で使用</label>
           <select id="cf_autoGenerate"><option value="0">OFF（手動のみ）</option><option value="1">ON</option></select>
           <div class="code-hint">職員マスターで許可された職員だけが対象です</div>
+        </div>
+        <div class="field"><label class="label">必要人数</label>
+          <input type="number" id="cf_requiredCount" min="0" step="1" oninput="updateCodeRequiredFields()">
+          <div class="code-hint" id="cf_requiredHint"></div>
+        </div>
+        <div class="field"><label class="label">必要人数の範囲</label>
+          <select id="cf_requiredScope" onchange="updateCodeRequiredFields()"><option value="none">なし</option><option value="unit">各ユニット</option><option value="facility">施設全体</option></select>
         </div>
       </div>
       <div class="code-err" id="cf_error"></div>
@@ -1955,7 +1962,7 @@ function isKibouFixed(si,y,m,d){
 
 // 自動生成が割り当てる勤務のうち、その職員が担当できる種類。
 // 特定職員名ではなく、勤務形態とNG勤務から共通に判定する。
-function autoAssignableShiftCodes(s){
+function autoAssignableShiftCodes(s,ignoreAutoSetting){
   if(isNightOnlyStaff(s)) return []; // 夜勤専従は手動指定のみ
   var base=s.type==='日勤'?['日']:['早1','早2','日3','遅','夜勤'];
   if(s.type==='夜勤なし')base=base.filter(function(sh){return sh!=='夜勤';});
@@ -1963,6 +1970,7 @@ function autoAssignableShiftCodes(s){
   var bs=s.baseShift;
   if(bs&&isBuiltinCode(bs)&&base.indexOf(bs)<0&&allowedShiftCodesOf(s).indexOf(bs)>=0) base=base.concat([bs]);
   return base.filter(function(sh){
+    if(!ignoreAutoSetting&&!codeAutoEnabled(sh))return false;
     if(ngShiftHit(s,sh))return false;
     return true;
   });
@@ -2000,15 +2008,40 @@ function baseShiftOf(s){
 // 手動専用の追加コードは、自動生成時の基本勤務・候補者優先度にも影響させない。
 function autoBaseShiftOf(s){
   var bs=baseShiftOf(s);
-  return isAdditionalShiftCode(bs)&&!additionalCodeAutoEnabled(bs)?'':bs;
+  return bs&&!codeAutoEnabled(bs)?'':bs;
 }
-// 必要人数が決まっている勤務（ユニット別1名・早2は全体1名）。自動生成はこの枠どおりに配置する
+// 必要人数を設定できる勤務。既存データは従来の枠を既定値として扱う。
 var REQUIRED_COUNT_SHIFTS=['早1','早2','日3','遅','夜勤'];
-function isRequiredCountShift(code){return REQUIRED_COUNT_SHIFTS.indexOf(countAsOf(code))>=0;}
+function canSetRequiredCount(code){return ['早1','早2','日3','遅','夜勤'].indexOf(code)>=0;}
+function defaultRequiredRule(code){
+  return {requiredCount:canSetRequiredCount(code)?1:0,requiredScope:canSetRequiredCount(code)?(code==='早2'?'facility':'unit'):'none'};
+}
+function requiredRuleOf(code){
+  var def=defaultRequiredRule(code),info=getCodeInfo(code);
+  if(!canSetRequiredCount(code))return {requiredCount:0,requiredScope:'none'};
+  var count=info&&info.requiredCount!==undefined?info.requiredCount:def.requiredCount;
+  return {requiredCount:count,requiredScope:count>0?(info&&info.requiredScope!==undefined?info.requiredScope:def.requiredScope):'none'};
+}
+function hasAutoGenerateSetting(code){
+  return ['早1','早2','日','日3','遅','夜勤'].indexOf(code)>=0||(!isBuiltinCode(code)&&!isLeaveCode(code));
+}
+function codeAutoEnabled(code){
+  var info=getCodeInfo(code);
+  return requiredRuleOf(code).requiredCount>0||!info||info.autoGenerate!==false;
+}
+function isRequiredCountShift(code){return requiredRuleOf(countAsOf(code)).requiredCount>0;}
+// 各ユニット・施設全体とも countAs の集計を使う。
+function requiredShiftCount(result,mkey,d0,shift,ucode){
+  if(ucode)return workUnitCount(result,mkey,d0,shift,ucode);
+  var count=0;
+  for(var si=0;si<result.length;si++)if(countAsOf(result[si][d0]||'休')===shift)count++;
+  return {count:count,unknown:0};
+}
 // 空き日を埋めるのに使える基本勤務。必要人数のある勤務は枠を超えて増やさないため対象外にする
 function baseFillShiftOf(s){
   var bs=autoBaseShiftOf(s);
-  return bs&&!isRequiredCountShift(bs)?bs:'';
+  // 夜勤は翌日の明/休と一体で配置するため、人数0でも単独の空き日補充には使わない。
+  return bs&&countAsOf(bs)!=='夜勤'&&!isRequiredCountShift(bs)?bs:'';
 }
 // 職員マスターで使用可能にした追加コード。
 // 必要人数の枠で埋まらない勤務日に、その人の基本勤務として自動配置する。
@@ -2025,18 +2058,21 @@ function autoShiftTypeConflict(s,code){
   var ca=countAsOf(code);
   // 夜勤専従は手動指定の夜勤・明/休が本来の勤務なので、勤務形態との衝突として扱わない
   if(isNightOnlyStaff(s)) return ['夜勤','明/休'].indexOf(ca)<0&&['早1','早2','日','日3','遅'].indexOf(ca)>=0;
-  return ['早1','早2','日','日3','遅','夜勤'].indexOf(ca)>=0&&autoAssignableShiftCodes(s).indexOf(ca)<0;
+  return ['早1','早2','日','日3','遅','夜勤'].indexOf(ca)>=0&&autoAssignableShiftCodes(s,true).indexOf(ca)<0;
 }
 
 var lastGenerationQuality=null;
 function evaluateShiftCandidate(result,y,m,mkey){
   var days=getDaysInMonth(y,m),shortage=0,unknown=0,restDiff=0,restSevere=0,consecPenalty=0,longRest=0,distribution=0,dualPenalty=0;
   for(var d0=0;d0<days;d0++){
-    ['S','K'].forEach(function(uc){['早1','日3','遅','夜勤'].forEach(function(sh){
-      var st=workUnitCount(result,mkey,d0,sh,uc);shortage+=Math.max(0,1-st.count);unknown+=st.unknown;
-    });});
-    var h2=0;for(var hi=0;hi<result.length;hi++)if(countAsOf(result[hi][d0]||'休')==='早2')h2++;
-    shortage+=Math.max(0,1-h2);
+    REQUIRED_COUNT_SHIFTS.forEach(function(sh){
+      var rule=requiredRuleOf(sh);
+      if(!rule.requiredCount)return;
+      (rule.requiredScope==='unit'?['S','K']:[null]).forEach(function(uc){
+        var st=requiredShiftCount(result,mkey,d0,sh,uc);
+        shortage+=Math.max(0,rule.requiredCount-st.count);unknown+=st.unknown;
+      });
+    });
   }
   var dual=[];
   for(var si=0;si<staff.length;si++){
@@ -2236,13 +2272,13 @@ function generateShift(options){
   // 未確定のままだと必要人数に数えられず、同じ勤務が重複して配置されるため。
   // 指定済みの勤務先は尊重し、ロック済みで勤務先不明の旧データは推測で確定しない。
   (function fixWishWorkUnits(){
-    var REQ=['早1','日3','遅','夜勤'];
     var covered=function(d0,base,code){
+      var count=0;
       for(var fi=0;fi<n;fi++){
         var c=result[fi][d0];
-        if(c&&countAsOf(c)===base&&savedWorkUnitCode(mkey,fi,d0)===code) return true;
+        if(c&&countAsOf(c)===base&&savedWorkUnitCode(mkey,fi,d0)===code) count++;
       }
-      return false;
+      return count>=requiredRuleOf(base).requiredCount;
     };
     var monthLoad=function(si,code){
       var c=0;
@@ -2262,8 +2298,9 @@ function generateShift(options){
       var code=unitCode(staff[w.i].unit);
       if(!code){
         var base=countAsOf(result[w.i][w.d0]);
-        var sOpen=REQ.indexOf(base)<0||!covered(w.d0,base,'S');
-        var kOpen=REQ.indexOf(base)<0||!covered(w.d0,base,'K');
+        var rule=requiredRuleOf(base);
+        var sOpen=rule.requiredScope!=='unit'||!covered(w.d0,base,'S');
+        var kOpen=rule.requiredScope!=='unit'||!covered(w.d0,base,'K');
         if(sOpen!==kOpen) code=sOpen?'S':'K';
         else{
           var ls=monthLoad(w.i,'S'),lk=monthLoad(w.i,'K');
@@ -2298,6 +2335,7 @@ function generateShift(options){
 
   function canAssign(si,d,shift){
     var s=staff[si];
+    if(hasAutoGenerateSetting(shift)&&!codeAutoEnabled(shift))return false;
     // 設定済みセルは変更不可（ロック・希望休・有休・希望シフトすべて含む）
     if(result[si][d-1]!==null) return false;
     // 勤務形態とNG勤務。通常勤務には「日」を自動配置せず、日勤勤務だけが「日」の対象。
@@ -2425,7 +2463,7 @@ function generateShift(options){
     return c;
   }
 
-  // 夜勤を先に配置（ユニットごと1名/日）
+  // 夜勤を先に配置（設定した人数・範囲）
   // 基本休日数に対する残り必要休日数（d日目時点）
   // 月全体で確定済みの休日（割当済みの休み＋先の希望休・有休・明/休等）を数える。夜勤そのものは数えない
   // 明/休の翌日は勤務を入れられず必ず休になるため、先の分も休日として見込む
@@ -2453,11 +2491,9 @@ function generateShift(options){
 
   function assignYakinsForUnit(unitStaff,ucode){
     if(!unitStaff.length) return;
+    var required=requiredRuleOf('夜勤').requiredCount;
     for(var d=1;d<=days;d++){
-      var hasYak=unitStaff.some(function(x){
-        return result[x.i][d-1]==='夜勤'&&actualWorkUnitCode(mkey,x.i,d-1,result[x.i][d-1])===ucode;
-      });
-      if(hasYak) continue;
+      for(var slot=requiredShiftCount(result,mkey,d-1,'夜勤',ucode).count;slot<required;slot++){
       var okToday=unitStaff.filter(function(x){return canAssign(x.i,d,'夜勤');});
       var cands=okToday.filter(function(x){return canPlaceAke(x.i,d);});
       if(!cands.length){
@@ -2469,8 +2505,8 @@ function generateShift(options){
         } else {
           reason='夜勤に入れる職員がいません（希望入力で固定済み、勤務制限、夜勤回数・連勤の上限など）';
         }
-        genWarnings[mkey].push({d:d,unit:ucode==='S'?'さくら':'けやき',reason:reason});
-        continue;
+        genWarnings[mkey].push({d:d,unit:ucode?unitName(ucode):'全体',reason:reason});
+        break;
       }
       // 夜勤回数・連勤・兼務先別の負担が軽い人を選ぶ。同点だけランダム化する
       cands=shuffle(cands).sort(function(a,b){return candidateLoadScore(a.i,'夜勤',ucode,d)-candidateLoadScore(b.i,'夜勤',ucode,d);});
@@ -2478,8 +2514,17 @@ function generateShift(options){
       result[chosen][d-1]='夜勤';
       if(d<days) result[chosen][d]='明/休';
       // 夜勤先と翌日の明/休の関連を内部に保持する（明/休は表示・人数集計には使わない）
-      setWorkUnitCode(mkey,chosen,d-1,ucode);
-      if(d<days)setWorkUnitCode(mkey,chosen,d,ucode);
+      var nightUnit=ucode||unitCode(staff[chosen].unit);
+      if(!nightUnit){
+        var sc=0,kc=0;
+        for(var ui=0;ui<n;ui++){
+          var au=actualWorkUnitCode(mkey,ui,d-1,result[ui][d-1]);if(au==='S')sc++;else if(au==='K')kc++;
+        }
+        nightUnit=sc<=kc?'S':'K';
+      }
+      setWorkUnitCode(mkey,chosen,d-1,nightUnit);
+      if(d<days)setWorkUnitCode(mkey,chosen,d,nightUnit);
+      }
     }
   }
 
@@ -2487,8 +2532,12 @@ function generateShift(options){
   var sakuraOnly=staff.map(function(s,i){return {s:s,i:i};}).filter(function(x){return x.s.unit==='さくら';});
   var keyakiOnly=staff.map(function(s,i){return {s:s,i:i};}).filter(function(x){return x.s.unit==='けやき';});
   var chuuritsu=staff.map(function(s,i){return {s:s,i:i};}).filter(function(x){return x.s.unit==='中立兼務';});
-  assignYakinsForUnit(sakuraOnly.concat(chuuritsu),'S');
-  assignYakinsForUnit(keyakiOnly.concat(chuuritsu),'K');
+  if(requiredRuleOf('夜勤').requiredScope==='facility'){
+    assignYakinsForUnit(sakuraOnly.concat(keyakiOnly).concat(chuuritsu),null);
+  } else {
+    assignYakinsForUnit(sakuraOnly.concat(chuuritsu),'S');
+    assignYakinsForUnit(keyakiOnly.concat(chuuritsu),'K');
+  }
 
   // 日勤系シフトを配置
   for(var d=1;d<=days;d++){
@@ -2496,7 +2545,7 @@ function generateShift(options){
     function assignRequired(unitStaff,shift,required,ucode){
       var already=unitStaff.filter(function(x){
         return result[x.i][d-1]!==null&&countAsOf(result[x.i][d-1])===shift
-          &&actualWorkUnitCode(mkey,x.i,d-1,result[x.i][d-1])===ucode;
+          &&(!ucode||actualWorkUnitCode(mkey,x.i,d-1,result[x.i][d-1])===ucode);
       }).length;
       if(already>=required) return;
       var assignable=unitStaff.filter(function(x){return result[x.i][d-1]===null&&canAssign(x.i,d,shift);});
@@ -2505,7 +2554,15 @@ function generateShift(options){
       if(!cands.length)cands=assignable;
       if(!cands.length) return;
       function recordUnit(idx){
-        if(ucode)setWorkUnitCode(mkey,idx,d-1,ucode);
+        var code=ucode||unitCode(staff[idx].unit);
+        if(!code){
+          var sc=0,kc=0;
+          for(var ui=0;ui<n;ui++){
+            var au=actualWorkUnitCode(mkey,ui,d-1,result[ui][d-1]);if(au==='S')sc++;else if(au==='K')kc++;
+          }
+          code=sc<=kc?'S':'K';
+        }
+        setWorkUnitCode(mkey,idx,d-1,code);
       }
       // 希望シフト一致者を最優先
       var preferred=cands.filter(function(x){return getPreferredShift(x.i,d)===shift;});
@@ -2521,30 +2578,37 @@ function generateShift(options){
       for(var i2=0;i2<Math.min(required-already,equalized.length);i2++){result[equalized[i2].i][d-1]=shift;recordUnit(equalized[i2].i);}
     }
 
+    var allDay=sakuraOnly.concat(keyakiOnly).concat(chuuritsu);
+    function assignConfigured(unitStaff,shift,ucode){
+      var rule=requiredRuleOf(shift);
+      if(rule.requiredScope==='unit')assignRequired(unitStaff,shift,rule.requiredCount,ucode);
+      else if(rule.requiredScope==='facility'&&ucode==='S')assignRequired(allDay,shift,rule.requiredCount,null);
+    }
     // さくらユニット
     var sk=sakuraOnly.concat(chuuritsu);
-    assignRequired(sk,'早1',1,'S');
-    assignRequired(sk,'日3',1,'S');
-    assignRequired(sk,'遅',1,'S');
+    assignConfigured(sk,'早1','S');
+    assignConfigured(sk,'日3','S');
+    assignConfigured(sk,'遅','S');
 
     // けやきユニット
     var ke=keyakiOnly.concat(chuuritsu);
-    assignRequired(ke,'早1',1,'K');
-    assignRequired(ke,'日3',1,'K');
-    assignRequired(ke,'遅',1,'K');
+    assignConfigured(ke,'早1','K');
+    assignConfigured(ke,'日3','K');
+    assignConfigured(ke,'遅','K');
 
-    // 早2は両ユニット合計1名（可能なら）・均等化
-    var allDay=sakuraOnly.concat(keyakiOnly).concat(chuuritsu);
-    var hasHayai2=allDay.some(function(x){return result[x.i][d-1]!==null&&countAsOf(result[x.i][d-1])==='早2';});
-    if(!hasHayai2){
-      var h2assignable=allDay.filter(function(x){return result[x.i][d-1]===null&&canAssign(x.i,d,'早2');});
+    // 早2の配置順と候補者選択は維持し、人数・範囲だけ設定から読む。
+    var h2rule=requiredRuleOf('早2');
+    (h2rule.requiredScope==='unit'?['S','K']:[null]).forEach(function(ucode){
+      var h2staff=ucode==='S'?sk:ucode==='K'?ke:allDay;
+      for(var slot=requiredShiftCount(result,mkey,d-1,'早2',ucode).count;slot<h2rule.requiredCount;slot++){
+      var h2assignable=h2staff.filter(function(x){return result[x.i][d-1]===null&&canAssign(x.i,d,'早2');});
       var h2cands=h2assignable.filter(function(x){return !mustRest(x.i,d);});
       if(!h2cands.length)h2cands=h2assignable;
       if(h2cands.length){
-        var h2pick=shuffle(h2cands).sort(function(a,b){return candidateLoadScore(a.i,'早2',null,d)-candidateLoadScore(b.i,'早2',null,d);});
+        var h2pick=shuffle(h2cands).sort(function(a,b){return candidateLoadScore(a.i,'早2',ucode,d)-candidateLoadScore(b.i,'早2',ucode,d);});
         result[h2pick[0].i][d-1]='早2';
         var h2idx=h2pick[0].i;
-        var h2unit=unitCode(staff[h2idx].unit);
+        var h2unit=ucode||unitCode(staff[h2idx].unit);
         if(!h2unit){
           var sc=0,kc=0;
           for(var ui=0;ui<n;ui++){
@@ -2553,8 +2617,9 @@ function generateShift(options){
           h2unit=sc<=kc?'S':'K';
         }
         setWorkUnitCode(mkey,h2idx,d-1,h2unit);
+      } else break;
       }
-    }
+    });
 
     // 残り空き：日勤勤務の職員だけ「日」を配置できる。通常勤務系は固定の必要勤務枠以外を休みにする。
     for(var i=0;i<n;i++){
@@ -2888,25 +2953,17 @@ function renderShiftTable(result,y,m){
     });
   }
 
-  // 必須勤務を、実勤務先を使って全日・ユニット別に再検証する
-  var requiredByUnit=['早1','日3','遅','夜勤'];
+  // 設定された人数・範囲で、countAs と実勤務先を使って全日を再検証する。
   for(var vd=0;vd<days;vd++){
-    ['S','K'].forEach(function(uc){
-      requiredByUnit.forEach(function(reqShift){
-        var stat=workUnitCount(result,mkey,vd,reqShift,uc);
-        if(stat.count<1) wNeed(unitName(uc),reqShift,'不足',1-stat.count,vd+1);
-        else if(stat.count>1) wNeed(unitName(uc),reqShift,'超過',stat.count,vd+1);
+    REQUIRED_COUNT_SHIFTS.forEach(function(reqShift){
+      var rule=requiredRuleOf(reqShift);
+      if(!rule.requiredCount)return;
+      (rule.requiredScope==='unit'?['S','K']:[null]).forEach(function(uc){
+        var stat=requiredShiftCount(result,mkey,vd,reqShift,uc);
+        if(stat.count<rule.requiredCount)wNeed(uc?unitName(uc):'全体',reqShift,'不足',rule.requiredCount-stat.count,vd+1);
+        else if(stat.count>rule.requiredCount)wNeed(uc?unitName(uc):'全体',reqShift,'超過',stat.count,vd+1);
       });
     });
-    var h2total=0,h2unknown=0;
-    for(var vi=0;vi<result.length;vi++){
-      if(countAsOf(result[vi][vd]||'休')==='早2'){
-        h2total++;
-        if(!actualWorkUnitCode(mkey,vi,vd,result[vi][vd]))h2unknown++;
-      }
-    }
-    if(h2total<1)wNeed('全体','早2','不足',1-h2total,vd+1);
-    if(h2total>1)wNeed('全体','早2','超過',h2total,vd+1);
   }
   // 必須勤務以外も、勤務先不明を明示する
   for(var vu=0;vu<result.length;vu++)for(var vday=0;vday<days;vday++){
@@ -2922,7 +2979,7 @@ function renderShiftTable(result,y,m){
   }
   var needLines=warnNeedOrder.sort().map(function(k){
     var w=warnNeed[k];
-    var head=w.unit+'：'+w.shift+(w.kind==='不足'?'が'+w.count+'名不足':'が'+w.count+'名（必要1名）');
+    var head=w.unit+'：'+w.shift+(w.kind==='不足'?'が'+w.count+'名不足':'が'+w.count+'名（必要'+requiredRuleOf(w.shift).requiredCount+'名）');
     return head+' — '+joinDays(w.days,8);
   });
   var staffCats=['休日','基本勤務','連勤','連休','夜勤回数','夜勤明け','希望入力','その他'];
@@ -2961,7 +3018,7 @@ function renderShiftTable(result,y,m){
   workKeys.forEach(function(key){
     DAILY_ROWS.push({label:'さ '+(key==='夜勤'?'夜':key),key:key,unit:'S',cls:codeColorClass(key)});
     DAILY_ROWS.push({label:'け '+(key==='夜勤'?'夜':key),key:key,unit:'K',cls:codeColorClass(key)});
-    if(key==='早2')DAILY_ROWS.push({label:'全体 早2',key:key,unit:'ALL',cls:codeColorClass(key)});
+    if(requiredRuleOf(key).requiredScope==='facility')DAILY_ROWS.push({label:'全体 '+(key==='夜勤'?'夜':key),key:key,unit:'ALL',cls:codeColorClass(key)});
   });
   DAILY_ROWS.push(
     {label:'明/休',key:'明/休',unit:'ALL',cls:'sc-ake'},
@@ -3394,7 +3451,7 @@ var BUILTIN_CODES=['早1','早2','日','日3','遅','夜勤','明/休','休','�
 // 休暇コード：自動生成では配置せず、希望シフト・NGシフトの選択肢にも出さない
 var LEAVE_CODES=['11連'];
 // 11連は基本休日数に含めない（休日換算0日）。年間の取得数はコードの入力日数で数える
-var DEFAULT_LEAVE_CODE_DEFS=[{code:'11連',label:'11連',color:'sc-off',start:'',end:'',breakMin:'',restValue:0,countAs:'',active:true}];
+var DEFAULT_LEAVE_CODE_DEFS=[{code:'11連',label:'11連',color:'sc-off',start:'',end:'',breakMin:'',restValue:0,countAs:'',active:true,requiredCount:0,requiredScope:'none'}];
 var SYSTEM_CODES=['夜勤','明/休','休','有休','希望休'];
 var CODE_COLOR_OPTIONS=[
   {cls:'sc-hayai1',name:'黄'},{cls:'sc-hayai2',name:'橙'},{cls:'sc-nichi',name:'水色'},{cls:'sc-nichi3',name:'青'},
@@ -3531,8 +3588,11 @@ function isProtectedCode(code){return isBuiltinCode(code)||isLeaveCode(code);}
 // 初期データ：現在の10コード（表示名・色・休日換算は既存設定から取得、時刻・休憩は未設定）
 function defaultShiftCodes(){
   return BUILTIN_CODES.map(function(c){
-    return {code:c,label:SHIFT_LABEL[c]||c,color:SHIFT_COLORS[c]||'sc-kyu',start:'',end:'',breakMin:'',
-      restValue:ruleRestValue(c),countAs:c,active:true};
+    var rule=defaultRequiredRule(c);
+    var item={code:c,label:SHIFT_LABEL[c]||c,color:SHIFT_COLORS[c]||'sc-kyu',start:'',end:'',breakMin:'',
+      restValue:ruleRestValue(c),countAs:c,active:true,requiredCount:rule.requiredCount,requiredScope:rule.requiredScope};
+    if(hasAutoGenerateSetting(c))item.autoGenerate=true;
+    return item;
   }).concat(copyJson(DEFAULT_LEAVE_CODE_DEFS));
 }
 
@@ -3599,8 +3659,19 @@ function validateShiftCodes(list,normalize){
     if(isBuiltinCode(code)&&color!==(SHIFT_COLORS[code]||'sc-kyu')) errors.push(no+'：既存コードの色は変更できません');
     var normalized={code:code,label:label,color:color,start:start,end:end,breakMin:breakMin===''?'':parseInt(breakMin,10),
       restValue:rv,countAs:it.countAs==null?'':String(it.countAs),active:active};
-    // 新項目がない既存の追加コードは true とし、従来の自動生成動作を維持する。
-    if(!isBuiltinCode(code)&&!isLeaveCode(code)) normalized.autoGenerate=typeof it.autoGenerate==='boolean'?it.autoGenerate:true;
+    // 欠けている項目だけ従来の固定ルールで補完する（明示的な0は維持）。
+    var rule=defaultRequiredRule(code);
+    var required=it.requiredCount===undefined?rule.requiredCount:it.requiredCount;
+    var scope=it.requiredScope===undefined?(required===0?'none':rule.requiredScope):it.requiredScope;
+    if(!Number.isSafeInteger(required)||required<0)errors.push(no+'：必要人数は0以上の整数にしてください');
+    if(['unit','facility','none'].indexOf(scope)<0)errors.push(no+'：必要人数の範囲が正しくありません');
+    if(!canSetRequiredCount(code)&&required!==0)errors.push(no+'：この勤務の必要人数は0にしてください');
+    if(required===0)scope='none';
+    else if(scope==='none')errors.push(no+'：必要人数がある場合は各ユニットか施設全体を選んでください');
+    normalized.requiredCount=required;
+    normalized.requiredScope=scope;
+    // 旧データの標準・追加勤務はON。必須勤務はOFFにできない。
+    if(hasAutoGenerateSetting(code))normalized.autoGenerate=required>0||it.autoGenerate!==false;
     out.push(normalized);
   });
   out.forEach(function(c){
@@ -3657,7 +3728,7 @@ function renderCodeList(){
   loadShiftCodes();
   var active=shiftCodes.filter(function(c){return c.active;}).length;
   document.getElementById('codeCount').textContent='登録 '+shiftCodes.length+'件（使用中 '+active+'件・使用停止 '+(shiftCodes.length-active)+'件）';
-  var html='<thead><tr><th>勤務コード</th><th>表示</th><th>開始</th><th>終了</th><th>休憩</th><th>実働時間</th><th>休日換算</th><th>人数集計</th><th>自動生成で使用</th><th>状態</th><th></th></tr></thead><tbody>';
+  var html='<thead><tr><th>勤務コード</th><th>表示</th><th>開始</th><th>終了</th><th>休憩</th><th>実働時間</th><th>休日換算</th><th>人数集計</th><th>自動生成で使用</th><th>必要人数</th><th>必要人数の範囲</th><th>状態</th><th></th></tr></thead><tbody>';
   shiftCodes.forEach(function(c,i){
     var wt=calcWorkTime(c.start,c.end,c.breakMin);
     html+='<tr'+(c.active?'':' class="code-stopped"')+'>'
@@ -3669,7 +3740,9 @@ function renderCodeList(){
       +'<td'+(wt.status==='error'?' style="color:#A32D2D"':wt.status==='unset'?' style="color:#bbb"':'')+'>'+formatWorkTime(wt)+'</td>'
       +'<td>'+c.restValue+'日</td>'
       +'<td>'+(c.countAs?escHtml(c.countAs):'<span style="color:#bbb">集計しない</span>')+'</td>'
-      +'<td>'+(isAdditionalShiftCode(c.code)?(c.autoGenerate!==false?'ON':'OFF（手動のみ）'):'<span style="color:#bbb">対象外</span>')+'</td>'
+      +'<td>'+(hasAutoGenerateSetting(c.code)?(c.autoGenerate!==false?'ON':'OFF（手動のみ）'):'<span style="color:#bbb">対象外</span>')+'</td>'
+      +'<td>'+c.requiredCount+'人</td>'
+      +'<td>'+(c.requiredScope==='unit'?'各ユニット':c.requiredScope==='facility'?'施設全体':'なし')+'</td>'
       +'<td>'+(c.active?'使用中':'使用停止')+'</td>'
       +'<td><button class="btn btn-sm" onclick="openCodeForm('+i+')">編集</button>'
       +(isProtectedCode(c.code)?'':' <button class="btn btn-sm btn-danger" onclick="deleteShiftCode('+i+')">削除</button>')+'</td>'
@@ -3682,7 +3755,7 @@ function openCodeForm(idx){
   loadAll();
   loadShiftCodes();
   codeEditIndex=idx;
-  var c=idx>=0?shiftCodes[idx]:{code:'',label:'',color:'sc-nichi',start:'',end:'',breakMin:'',restValue:0,countAs:'',active:true,autoGenerate:false};
+  var c=idx>=0?shiftCodes[idx]:{code:'',label:'',color:'sc-nichi',start:'',end:'',breakMin:'',restValue:0,countAs:'',active:true,autoGenerate:false,requiredCount:0,requiredScope:'none'};
   var builtin=idx>=0&&isProtectedCode(c.code),system=idx>=0&&isSystemCode(c.code);
   // 11連などの休暇コードは、コード名の変更・削除だけ禁止し、色と休日換算は変更できる
   var fixedValues=idx>=0&&isBuiltinCode(c.code);
@@ -3735,16 +3808,33 @@ function openCodeForm(idx){
   activeEl.disabled=system;
   var autoField=document.getElementById('cf_autoGenerateField');
   var autoEl=document.getElementById('cf_autoGenerate');
-  var additional=idx<0||(!isBuiltinCode(c.code)&&!isLeaveCode(c.code));
-  autoField.style.display=additional?'':'none';
+  autoField.style.display=hasAutoGenerateSetting(c.code)?'':'none';
   autoEl.value=c.autoGenerate===false?'0':'1';
+  var requiredEl=document.getElementById('cf_requiredCount');
+  requiredEl.value=String(c.requiredCount);
+  requiredEl.disabled=!canSetRequiredCount(c.code);
+  document.getElementById('cf_requiredScope').value=c.requiredScope;
+  document.getElementById('cf_requiredHint').textContent=canSetRequiredCount(c.code)?'1人以上の場合、自動生成はON固定です':'この勤務の必要人数は0固定です';
+  updateCodeRequiredFields();
   document.getElementById('cf_error').textContent='';
   updateCodeWorkPreview();
   document.getElementById('codeFormArea').style.display='block';
+  document.getElementById('codeFormArea').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function cancelCodeForm(){
   document.getElementById('codeFormArea').style.display='none';
   codeEditIndex=-1;
+}
+function updateCodeRequiredFields(){
+  var countEl=document.getElementById('cf_requiredCount');
+  var scopeEl=document.getElementById('cf_requiredScope');
+  var autoEl=document.getElementById('cf_autoGenerate');
+  var required=Number(countEl.value);
+  if(required===0)scopeEl.value='none';
+  else if(required>0&&scopeEl.value==='none')scopeEl.value=defaultRequiredRule(document.getElementById('cf_code').value).requiredScope;
+  scopeEl.disabled=countEl.disabled||required===0;
+  autoEl.disabled=required>0;
+  if(required>0)autoEl.value='1';
 }
 function updateCodeWorkPreview(){
   var wt=calcWorkTime(document.getElementById('cf_start').value.trim(),document.getElementById('cf_end').value.trim(),document.getElementById('cf_break').value.trim());
@@ -3771,9 +3861,12 @@ function saveCodeForm(){
     breakMin:document.getElementById('cf_break').value.trim(),
     restValue:Number(document.getElementById('cf_rest').value),
     countAs:document.getElementById('cf_countAs').value,
-    active:document.getElementById('cf_active').value==='1'
+    active:document.getElementById('cf_active').value==='1',
+    requiredCount:canSetRequiredCount(code)?(document.getElementById('cf_requiredCount').value.trim()===''?NaN:Number(document.getElementById('cf_requiredCount').value)):0,
+    requiredScope:canSetRequiredCount(code)?document.getElementById('cf_requiredScope').value:'none'
   };
-  if(!old||(!isBuiltinCode(old.code)&&!isLeaveCode(old.code))) item.autoGenerate=document.getElementById('cf_autoGenerate').value==='1';
+  if(item.requiredCount===0)item.requiredScope='none';
+  if(hasAutoGenerateSetting(code))item.autoGenerate=item.requiredCount>0||document.getElementById('cf_autoGenerate').value==='1';
   if(old&&isBuiltinCode(old.code)) item.color=old.color;
   if(old&&isBuiltinCode(old.code)) item.restValue=old.restValue;
   if(old&&isSystemCode(old.code)) item.active=true;
