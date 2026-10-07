@@ -407,6 +407,16 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
   <div id="idMigrationArea"></div>
   <div id="staffOpPanel"></div>
   <div id="rosterImportArea"></div>
+  <div id="employmentTypePanel" class="form-card" style="display:none">
+    <div class="sec-title" style="margin-bottom:12px">雇用形態を管理</div>
+    <div id="employmentTypeList"></div>
+    <div class="toolbar" style="margin-top:12px">
+      <input type="text" id="newEmploymentType" placeholder="新しい雇用形態" aria-label="新しい雇用形態" style="flex:1">
+      <button type="button" class="btn btn-primary" onclick="addEmploymentType()">追加</button>
+      <button type="button" class="btn" onclick="document.getElementById('employmentTypePanel').style.display='none'">閉じる</button>
+    </div>
+    <div class="code-hint">追加・11連管理対象の変更は自動保存されます。</div>
+  </div>
   <div id="staffFormArea" style="display:none">
     <div class="form-card">
       <div style="font-size:14px;font-weight:500;margin-bottom:16px" id="staffFormTitle">新規職員登録</div>
@@ -419,7 +429,17 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
           <select id="ftype" onchange="onTypeChange()"><option value="">選択</option><option value="全勤務">通常勤務（早出・日3・遅出・夜勤）</option><option value="日勤">日勤勤務（「日」のみ）</option><option value="夜勤なし">通常勤務（夜勤なし）</option><option value="夜勤専従">夜勤専従（手動指定の夜勤のみ）</option><option value="制限あり">勤務制限あり</option></select>
         </div>
         <div class="field"><label class="label">雇用形態</label>
-          <select id="femp"><option value="正職員">正職員</option><option value="常勤">常勤</option><option value="パート">パート</option></select>
+          <select id="femp"></select>
+        </div>
+        <div class="field form-full">
+          <label class="label">日勤務の個別時間</label>
+          <select id="fdayTimeMode" onchange="updateStaffDayTimeFields()"><option value="base">基本設定を使う</option><option value="custom">個別設定する</option></select>
+          <div class="code-hint">基本設定は勤務コード「日」の開始・終了・休憩です。自動生成の配置には影響しません。</div>
+          <div id="staffDayTimeFields" class="form-grid" style="display:none;margin-top:8px">
+            <div class="field"><label class="label" for="fdayStart">開始時刻（HH:MM）</label><input type="text" id="fdayStart" placeholder="例：08:30" maxlength="5"></div>
+            <div class="field"><label class="label" for="fdayEnd">終了時刻（HH:MM）</label><input type="text" id="fdayEnd" placeholder="例：17:30" maxlength="5"></div>
+            <div class="field"><label class="label" for="fdayBreak">休憩時間（分）</label><input type="text" id="fdayBreak" placeholder="例：60" inputmode="numeric" maxlength="4"></div>
+          </div>
         </div>
         <div class="field form-full" id="restrictField" style="display:none">
           <label class="label">勤務可能なシフト（複数選択可）</label>
@@ -474,7 +494,10 @@ table.stbl th.holiday,table.calendar th.holiday{color:#A32D2D}
       <div class="count-item"><span id="cKeyaki">0</span>名 けやき</div>
       <div class="count-item"><span id="cBoth">0</span>名 兼務</div>
     </div>
-    <button class="btn btn-primary" onclick="openStaffForm()" style="margin-left:auto">＋ 職員を追加</button>
+    <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
+      <button class="btn" onclick="openEmploymentTypePanel()">雇用形態を管理</button>
+      <button class="btn btn-primary" onclick="openStaffForm()">＋ 職員を追加</button>
+    </div>
   </div>
 
   <div id="staffList" class="staff-groups"><div class="empty">まだ職員が登録されていません</div></div>
@@ -842,6 +865,7 @@ initializeShiftAutoSaveSetting();
 
 var SHIFTS=['早1','早2','日','日3','遅','夜勤'];
 var STORAGE_STAFF='shiftTool_staffMaster';
+var STORAGE_EMPLOYMENT_TYPES='shiftTool_employmentTypes';
 var STORAGE_KIBOU='shiftTool_kibou';
 var STORAGE_LOCK='shiftTool_locked';
 // 互換性のためキー名は維持するが、中立兼務だけでなく全職員の「実勤務先」を保存する
@@ -1241,6 +1265,102 @@ function legacyStaffAddBlocked(){
   }
   return false;
 }
+function defaultEmploymentTypes(){
+  return [{name:'正職員',elevenDayTarget:true},{name:'常勤',elevenDayTarget:false},{name:'パート',elevenDayTarget:false}];
+}
+function validEmploymentTypes(data){
+  if(!isPlainObject(data)||data.version!==1||!Array.isArray(data.types))return false;
+  return data.types.every(function(t,i){
+    return isPlainObject(t)&&typeof t.name==='string'&&!!t.name.trim()&&typeof t.elevenDayTarget==='boolean'
+      &&data.types.slice(0,i).every(function(prev){return prev.name!==t.name;});
+  });
+}
+function loadEmploymentTypes(){
+  var types=defaultEmploymentTypes(),data=null;
+  try{data=JSON.parse(localStorage.getItem(STORAGE_EMPLOYMENT_TYPES));}catch(e){}
+  if(validEmploymentTypes(data))data.types.forEach(function(t){
+    var existing=types.filter(function(o){return o.name===t.name;})[0];
+    if(existing)existing.elevenDayTarget=t.elevenDayTarget;
+    else types.push({name:t.name,elevenDayTarget:t.elevenDayTarget});
+  });
+  // 過去の職員データに独自の名称があっても、選択肢から消さない。
+  (staff||[]).forEach(function(s){
+    if(s&&typeof s.emp==='string'&&s.emp&& !types.some(function(t){return t.name===s.emp;}))types.push({name:s.emp,elevenDayTarget:false});
+  });
+  return types;
+}
+function refreshEmploymentOptions(selected){
+  var el=document.getElementById('femp');
+  if(selected===undefined)selected=el.value;
+  var types=loadEmploymentTypes();
+  if(selected&&!types.some(function(t){return t.name===selected;}))types.push({name:selected,elevenDayTarget:false});
+  el.innerHTML='<option value="">未設定</option>'+types.map(function(t){return '<option value="'+escHtml(t.name)+'">'+escHtml(t.name)+'</option>';}).join('');
+  el.value=selected||'';
+}
+function renderEmploymentTypeList(){
+  document.getElementById('employmentTypeList').innerHTML=loadEmploymentTypes().map(function(t){
+    return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+      +'<span style="flex:1">'+escHtml(t.name)+'</span><label class="label">11連管理対象 '
+      +'<select style="width:auto" data-name="'+escHtml(t.name)+'" onchange="setEmploymentTypeTarget(this.dataset.name,this.value===\'1\')">'
+      +'<option value="1"'+(t.elevenDayTarget?' selected':'')+'>ON</option><option value="0"'+(!t.elevenDayTarget?' selected':'')+'>OFF</option></select></label></div>';
+  }).join('');
+}
+function openEmploymentTypePanel(){
+  renderEmploymentTypeList();
+  document.getElementById('newEmploymentType').value='';
+  var panel=document.getElementById('employmentTypePanel');
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function saveEmploymentTypes(types){
+  try{localStorage.setItem(STORAGE_EMPLOYMENT_TYPES,JSON.stringify({version:1,types:types}));}
+  catch(e){alert('雇用形態を保存できませんでした');return false;}
+  refreshEmploymentOptions();
+  renderEmploymentTypeList();
+  return true;
+}
+function addEmploymentType(){
+  var input=document.getElementById('newEmploymentType'),name=input.value.trim(),types=loadEmploymentTypes();
+  if(!name){alert('雇用形態を入力してください');return;}
+  if(types.some(function(t){return t.name===name;})){alert('同じ雇用形態が登録されています');return;}
+  types.push({name:name,elevenDayTarget:false});
+  if(saveEmploymentTypes(types))input.value='';
+}
+function setEmploymentTypeTarget(name,target){
+  var types=loadEmploymentTypes(),item=types.filter(function(t){return t.name===name;})[0];
+  if(!item)return;
+  item.elevenDayTarget=target===true;
+  if(!saveEmploymentTypes(types))renderEmploymentTypeList();
+}
+
+function dayWorkTimeError(time){
+  if(!isPlainObject(time)||typeof time.start!=='string'||typeof time.end!=='string'||!time.start||!time.end)return '開始時刻と終了時刻を入力してください';
+  if(!Number.isSafeInteger(time.breakMin)||time.breakMin<0)return '休憩時間は0以上の整数（分）で入力してください';
+  var result=calcWorkTime(time.start,time.end,time.breakMin);
+  return result.status==='ok'?'':result.message||'勤務時間が正しくありません';
+}
+function getStaffDayWorkTime(s){
+  var time=s&&s.dayWorkTime;
+  if(!time||dayWorkTimeError(time)){
+    if(!shiftCodes||!shiftCodes.length)loadShiftCodes();
+    time=getCodeInfo('日')||{start:'',end:'',breakMin:''};
+  }
+  return {start:time.start,end:time.end,breakMin:time.breakMin};
+}
+function updateStaffDayTimeFields(){
+  var custom=document.getElementById('fdayTimeMode').value==='custom';
+  document.getElementById('staffDayTimeFields').style.display=custom?'grid':'none';
+  ['fdayStart','fdayEnd','fdayBreak'].forEach(function(id){document.getElementById(id).disabled=!custom;});
+}
+function fillStaffDayTimeForm(s){
+  var custom=!!(s&&s.dayWorkTime),time=custom?s.dayWorkTime:getStaffDayWorkTime(null);
+  document.getElementById('fdayTimeMode').value=custom?'custom':'base';
+  document.getElementById('fdayStart').value=time.start||'';
+  document.getElementById('fdayEnd').value=time.end||'';
+  document.getElementById('fdayBreak').value=time.breakMin==null?'':String(time.breakMin);
+  updateStaffDayTimeFields();
+}
+
 function openStaffForm(){
   if(legacyStaffAddBlocked()) return;
   editIndex=-1;
@@ -1248,7 +1368,8 @@ function openStaffForm(){
   document.getElementById('fname').value='';
   document.getElementById('funit').value='';
   document.getElementById('ftype').value='';
-  document.getElementById('femp').value='常勤';
+  refreshEmploymentOptions('常勤');
+  fillStaffDayTimeForm(null);
   document.getElementById('fmaxrest').value='3';
   document.getElementById('fbaserest').value='9';
   document.getElementById('fmaxconsec').value='5';
@@ -1292,6 +1413,13 @@ function saveStaff(){
   else if(type==='夜勤なし') ng=['夜勤'];
   else ng=[];
   var obj={name:name,unit:unit,type:type,emp:emp,maxrest:maxrest,baserest:baserest,maxConsec:maxConsec,ngShifts:ng,ngDow:ngDowSelected.slice(),customShiftCodes:customShiftCodesSelected.slice()};
+  if(document.getElementById('fdayTimeMode').value==='custom'){
+    var breakText=document.getElementById('fdayBreak').value.trim();
+    var time={start:document.getElementById('fdayStart').value.trim(),end:document.getElementById('fdayEnd').value.trim(),breakMin:breakText===''?0:(/^[0-9]+$/.test(breakText)?Number(breakText):NaN)};
+    var timeError=dayWorkTimeError(time);
+    if(timeError){alert('日勤務の個別時間：'+timeError);return;}
+    obj.dayWorkTime=time;
+  }
   // 基本勤務は、勤務可能なシフトに残っているときだけ保存する（未設定なら項目自体を持たせない）
   var baseSel=document.getElementById('fbaseshift').value;
   if(baseSel&&formAllowedCodesForBase().indexOf(baseSel)>=0) obj.baseShift=baseSel;
@@ -1312,7 +1440,8 @@ function editStaff(i){
   document.getElementById('fname').value=s.name;
   document.getElementById('funit').value=s.unit;
   document.getElementById('ftype').value=s.type;
-  document.getElementById('femp').value=s.emp;
+  refreshEmploymentOptions(s.emp||'');
+  fillStaffDayTimeForm(s);
   document.getElementById('fmaxrest').value=String(maxRestOf(s));
   document.getElementById('fbaserest').value=s.baserest||8;
   document.getElementById('fmaxconsec').value=String(maxConsecOf(s));
@@ -1364,6 +1493,7 @@ function deleteStaff(i){
 function renderStaffList(){
   renderIdMigrationArea();
   renderRosterImportArea();
+  if(document.getElementById('employmentTypePanel').style.display==='block')renderEmploymentTypeList();
   var list=document.getElementById('staffList');
   var countBar=document.getElementById('countBar');
   if(!staff.length){
@@ -1387,7 +1517,7 @@ function renderStaffList(){
         +'<button class="btn btn-sm btn-move" onclick="moveStaffStep('+i+',-1)"'+(up?'':' disabled')+' title="上へ">&#9650;</button>'
         +'<button class="btn btn-sm btn-move" onclick="moveStaffStep('+i+',1)"'+(down?'':' disabled')+' title="下へ">&#9660;</button>'
       +'</div>'
-      +'<div class="staff-row-name" style="font-weight:500">'+s.name+' <span style="font-size:11px;color:#999">'+s.emp+'</span></div>'
+      +'<div class="staff-row-name" style="font-weight:500">'+s.name+' <span style="font-size:11px;color:#999">'+escHtml(s.emp)+'</span></div>'
       +'<div class="staff-row-unit"><span class="badge '+UNIT_BADGE[s.unit]+'">'+(s.unit==='中立兼務'?'兼務':s.unit)+'</span></div>'
       +'<div class="staff-row-type"><span class="staff-detail-label">勤務形態</span>'+TYPE_LABEL[s.type]
         +(s.baseShift?'<br><span style="font-size:11px;color:#1B6B45">基本：'+escHtml(codeDisplayName(s.baseShift))+'</span>':'')+'</div>'
@@ -2799,7 +2929,7 @@ function renderShiftTable(result,y,m){
     tbody+='<tr><td colspan="'+(days+8)+'" class="unit-head">'+unit+'</td></tr>';
     members.forEach(function(x){
       var si=x.i;var s=x.s;
-      var row='<tr><td class="name-cell"><span class="staff-name">'+s.name+'</span><span class="emp">'+s.emp+'</span></td>';
+      var row='<tr><td class="name-cell"><span class="staff-name">'+s.name+'</span><span class="emp">'+escHtml(s.emp)+'</span></td>';
       var yakCount=0,workCount=0;
       for(var d=1;d<=days;d++){
         var sh=cellAt(result,si,d-1);
@@ -4030,6 +4160,7 @@ var FULL_BACKUP_LABELS={
   shiftTool_staffMaster:'職員マスター',shiftTool_kibou:'希望休・有休・希望シフト',shiftTool_generated:'生成済み勤務表',
   shiftTool_locked:'ロック',shiftTool_chuuritsuUnit:'実勤務先',shiftTool_genWarnings:'夜勤の配置不可記録',
   shiftTool_shiftCodes:'勤務コード設定',
+  shiftTool_employmentTypes:'雇用形態設定',
   shiftTool_staffMaster_v2:'職員マスター（固定ID）',shiftTool_kibou_v2:'希望休・有休・希望シフト（固定ID）',
   shiftTool_generated_v2:'生成済み勤務表（固定ID）',shiftTool_locked_v2:'ロック（固定ID）',
   shiftTool_chuuritsuUnit_v2:'実勤務先（固定ID）',shiftTool_idMigration:'固定ID移行の記録',
@@ -4261,6 +4392,10 @@ function checkRestoreStructure(key,o){
     else o.forEach(function(st,i){
       if(!isPlainObject(st)||typeof st.name!=='string'||['さくら','けやき','中立兼務'].indexOf(st.unit)<0)
         errs.push((i+1)+'人目の職員データ（氏名・ユニット）が正しくありません');
+      if(st&&st.dayWorkTime!=null){
+        var timeError=dayWorkTimeError(st.dayWorkTime);
+        if(timeError)errs.push((i+1)+'人目の日勤務の個別時間：'+timeError);
+      }
     });
   } else if(key==='shiftTool_kibou'){
     monthMap(function(mk,v){idxMap(v,function(days){
@@ -4290,6 +4425,8 @@ function checkRestoreStructure(key,o){
       if(!Array.isArray(list)||!list.every(function(w){return isPlainObject(w)&&typeof w.d==='number'&&typeof w.unit==='string'&&typeof w.reason==='string';}))
         errs.push('夜勤の配置不可記録の形式が正しくありません');
     });
+  } else if(key===STORAGE_EMPLOYMENT_TYPES){
+    if(!validEmploymentTypes(o))errs.push('雇用形態設定の形式・版・名称・11連管理対象が正しくありません');
   } else if(key==='shiftTool_shiftCodes'){
     if(!isPlainObject(o)||o.version!==1) errs.push('勤務コード設定の形式・版が正しくありません');
     else{
@@ -5298,14 +5435,16 @@ function undoMonthReset(){
   if(panel) panel.innerHTML='<div class="form-card" style="font-size:14px;color:#1B6B45;border-color:#cfe0bd;background:#f6faf2">リセット前の状態に戻しました</div>';
 }
 
-/* ===== 11連（年間11日・正職員の祝日代替休暇） =====
+/* ===== 11連（年間11日・雇用形態設定による対象職員の休暇） =====
    手動入力だけで使う勤務コード。自動生成では配置しない。
    集計期間は4月1日〜翌年3月31日。有休・基本休日数とは別に数える */
 var JUICHIREN_CODE='11連';
 var JUICHIREN_ANNUAL=11;
 var juichirenFiscalYear=null;
 
-function juichirenEligible(s){return !!s&&s.emp==='正職員';}
+function juichirenEligible(s){
+  return !!s&&loadEmploymentTypes().some(function(t){return t.name===s.emp&&t.elevenDayTarget===true;});
+}
 function fiscalYearOf(y,m1){return m1>=4?y:y-1;}
 function fiscalMonthKeys(fy){
   var keys=[];
@@ -5352,7 +5491,7 @@ function renderJuichiren(){
     var used=u.days.length,left=JUICHIREN_ANNUAL-used;
     var breakdown=Object.keys(u.byMonth).sort(function(a,b){return (+a<4?+a+12:+a)-(+b<4?+b+12:+b);})
       .map(function(m1){return m1+'月 '+u.byMonth[m1]+'日';}).join('・');
-    var note=!u.eligible?'<span style="color:#A32D2D">正職員以外（'+escHtml(u.emp||'未設定')+'）に入力されています</span>':left<0?'<span style="color:#A32D2D">付与日数を超えています</span>':'';
+    var note=!u.eligible?'<span style="color:#A32D2D">11連管理対象外（'+escHtml(u.emp||'未設定')+'）に入力されています</span>':left<0?'<span style="color:#A32D2D">付与日数を超えています</span>':'';
     return '<tr><td style="padding:4px 12px 4px 0">'+escHtml(u.name)+'</td>'
       +'<td style="padding:4px 12px 4px 0"><span class="badge '+(UNIT_BADGE[u.unit]||'')+'">'+escHtml(u.unit)+'</span></td>'
       +'<td style="padding:4px 12px 4px 0">'+escHtml(u.emp||'')+'</td>'
@@ -5363,12 +5502,12 @@ function renderJuichiren(){
   }).join('');
   var totalUsed=usage.reduce(function(a,u){return a+u.days.length;},0);
   area.innerHTML='<div class="form-card" style="font-size:13px;line-height:1.7">'
-    +'<div style="font-size:12px;color:#666">対象は雇用形態が「正職員」の職員です。年間'+JUICHIREN_ANNUAL+'日の付与から、勤務表に入力された「'+JUICHIREN_CODE+'」の日数を引いた残りを表示します。'
+    +'<div style="font-size:12px;color:#666">対象は「雇用形態を管理」で11連管理対象をONにした雇用形態の職員です。年間'+JUICHIREN_ANNUAL+'日の付与から、勤務表に入力された「'+JUICHIREN_CODE+'」の日数を引いた残りを表示します。'
     +'11連は月の基本休日数（例：9日）には含めない別枠の休みです（基本休日9日＋11連1日＝その月の休み10日）。'
     +'自動生成では配置しないため、シフト表のセルをクリックして手動で入力してください。</div>'
     +'<div style="margin-top:6px;font-size:12px;color:#666">この年度で作成済みの勤務表：'+(monthsWithData.length?monthsWithData.map(function(mk){return mk.split('-')[1]+'月';}).join('・'):'なし')+'（未作成の月は0日として計算）</div>'
     +(rows?'<table style="margin-top:10px;border-collapse:collapse"><tr><th style="text-align:left">氏名</th><th style="text-align:left">所属</th><th style="text-align:left">雇用形態</th><th>付与</th><th>取得済み</th><th>残り</th><th style="text-align:left">取得月</th></tr>'+rows+'</table>'
-      :'<div style="margin-top:10px;color:#999">対象の職員がいません（職員マスターで雇用形態「正職員」を設定してください）</div>')
+      :'<div style="margin-top:10px;color:#999">対象の職員がいません（職員マスターの雇用形態と「雇用形態を管理」の11連管理対象を確認してください）</div>')
     +'<div style="margin-top:8px;font-size:12px;color:#666">'+fy+'年度の取得合計：'+totalUsed+'日</div></div>';
 }
 
